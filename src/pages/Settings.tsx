@@ -1,11 +1,26 @@
 import { motion } from "framer-motion";
-import { User, FileText, Bell, Moon, Globe, HelpCircle, LogOut, ChevronRight } from "lucide-react";
+import { User, FileText, Bell, Moon, Globe, HelpCircle, LogOut, ChevronRight, MessageCircle, Facebook } from "lucide-react";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { Switch } from "@/components/ui/switch";
 import { useState } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { useAppStore } from "@/stores/appStore";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Button } from "@/components/ui/button";
+import { generateMonthlyReport } from "@/lib/pdfGenerator";
+import { Capacitor } from "@capacitor/core";
+import { Filesystem, Directory } from "@capacitor/filesystem";
+import { Share } from "@capacitor/share";
+import { startOfMonth, endOfMonth, format } from "date-fns";
 
 interface SettingItemProps {
   icon: React.ElementType;
@@ -44,23 +59,93 @@ function SettingItem({ icon: Icon, title, subtitle, onClick, trailing, delay = 0
 export default function Settings() {
   const [darkMode, setDarkMode] = useState(false);
   const [notifications, setNotifications] = useState(true);
+
+  // Profile Edit State
+  const [isProfileOpen, setIsProfileOpen] = useState(false);
+  const [editName, setEditName] = useState("");
+  const [editTitle, setEditTitle] = useState("");
+
   const { toast } = useToast();
   const shifts = useAppStore((state) => state.shifts);
   const hospitals = useAppStore((state) => state.hospitals);
+  const userProfile = useAppStore((state) => state.userProfile);
+  const updateUserProfile = useAppStore((state) => state.updateUserProfile);
 
-  const handleExportPDF = () => {
+  const handleEditProfile = () => {
+    setEditName(userProfile.name);
+    setEditTitle(userProfile.title);
+    setIsProfileOpen(true);
+  };
+
+  const handleSaveProfile = () => {
+    updateUserProfile({ name: editName, title: editTitle });
+    setIsProfileOpen(false);
     toast({
-      title: "Export Started",
-      description: "Your monthly report is being generated...",
+      title: "Profile Updated",
+      description: "Your profile details have been saved.",
     });
-    
-    // Simulate export - in production this would generate actual PDF
-    setTimeout(() => {
+  };
+
+  const handleExportPDF = async () => {
+    try {
       toast({
-        title: "Export Complete",
-        description: "Report has been downloaded",
+        title: "Generating Report...",
+        description: "Please wait while we create your PDF.",
       });
-    }, 1500);
+
+      const today = new Date();
+      const monthStart = startOfMonth(today);
+      const monthEnd = endOfMonth(today);
+
+      const monthlyShifts = shifts.filter((s) => {
+        const d = new Date(s.date);
+        return d >= monthStart && d <= monthEnd;
+      });
+
+      const base64Data = await generateMonthlyReport({
+        profile: userProfile,
+        month: today,
+        shifts: monthlyShifts,
+        hospitals: hospitals,
+      });
+
+      const fileName = `Report_${format(today, "MMM_yyyy")}.pdf`;
+
+      if (Capacitor.isNativePlatform()) {
+        // --- Android/iOS Logic ---
+        const result = await Filesystem.writeFile({
+          path: fileName,
+          data: base64Data,
+          directory: Directory.Cache,
+        });
+
+        await Share.share({
+          title: "Monthly Shift Report",
+          text: `Here is my shift report for ${format(today, "MMMM yyyy")}`,
+          files: [result.uri],
+        });
+      } else {
+        // --- Web Logic ---
+        const link = document.createElement("a");
+        link.href = `data:application/pdf;base64,${base64Data}`;
+        link.download = fileName;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+      }
+
+      toast({
+        title: "Success",
+        description: "Report generated successfully",
+      });
+    } catch (error) {
+      console.error("Export failed:", error);
+      toast({
+        title: "Export Failed",
+        description: "Could not generate the report.",
+        variant: "destructive",
+      });
+    }
   };
 
   const toggleDarkMode = () => {
@@ -74,18 +159,23 @@ export default function Settings() {
 
       <div className="px-4 space-y-3">
         {/* Profile Section */}
+        {/* Profile Section */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="bg-card rounded-2xl p-5 border border-border mb-6"
+          className="bg-card rounded-2xl p-5 border border-border mb-6 cursor-pointer hover:bg-secondary/50 transition-colors"
+          onClick={handleEditProfile}
         >
           <div className="flex items-center gap-4">
             <div className="w-16 h-16 rounded-full bg-gradient-to-br from-primary to-accent flex items-center justify-center">
               <User className="h-8 w-8 text-primary-foreground" />
             </div>
             <div>
-              <h2 className="text-lg font-semibold text-foreground">Doctor</h2>
+              <h2 className="text-lg font-semibold text-foreground">{userProfile.name}</h2>
               <p className="text-sm text-muted-foreground">
+                {userProfile.title}
+              </p>
+              <p className="text-xs text-muted-foreground mt-1">
                 {hospitals.length} hospitals • {shifts.length} shifts logged
               </p>
             </div>
@@ -163,6 +253,26 @@ export default function Settings() {
           />
         </div>
 
+        <div className="space-y-2 mt-4">
+          <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider px-1 mb-2">
+            Community
+          </p>
+          <SettingItem
+            icon={MessageCircle}
+            title="Telegram Channel"
+            subtitle="Join our community"
+            delay={0.3}
+            onClick={() => window.open("https://t.me/M7MED1573", "_blank")}
+          />
+          <SettingItem
+            icon={Facebook}
+            title="Facebook Page"
+            subtitle="Follow us"
+            delay={0.35}
+            onClick={() => window.open("https://www.facebook.com/M7MED1573/", "_blank")}
+          />
+        </div>
+
         {/* Stats Summary */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
@@ -178,6 +288,40 @@ export default function Settings() {
           </p>
         </motion.div>
       </div>
+      {/* Profile Edit Dialog */}
+      <Dialog open={isProfileOpen} onOpenChange={setIsProfileOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Edit Profile</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="name">Display Name</Label>
+              <Input
+                id="name"
+                value={editName}
+                onChange={(e) => setEditName(e.target.value)}
+                placeholder="Dr. Name"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="title">Professional Title</Label>
+              <Input
+                id="title"
+                value={editTitle}
+                onChange={(e) => setEditTitle(e.target.value)}
+                placeholder="e.g. General Practitioner"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsProfileOpen(false)}>
+              Cancel
+            </Button>
+            <Button onClick={handleSaveProfile}>Save Changes</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </AppLayout>
   );
 }

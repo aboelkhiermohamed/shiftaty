@@ -2,20 +2,29 @@ import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import { Hospital, Shift, PaymentModel } from "@/types";
 
+export interface UserProfile {
+  name: string;
+  title: string;
+}
+
 interface AppState {
+  userProfile: UserProfile;
   hospitals: Hospital[];
   shifts: Shift[];
-  
+
+  // Profile actions
+  updateUserProfile: (profile: Partial<UserProfile>) => void;
+
   // Hospital actions
   addHospital: (hospital: Omit<Hospital, "id" | "createdAt" | "updatedAt">) => void;
   updateHospital: (id: string, updates: Partial<Hospital>) => void;
   deleteHospital: (id: string) => void;
-  
+
   // Shift actions
   addShift: (shift: Omit<Shift, "id" | "createdAt" | "updatedAt" | "totalEarnings">) => void;
   updateShift: (id: string, updates: Partial<Shift>) => void;
   deleteShift: (id: string) => void;
-  
+
   // Calculation helpers
   calculateShiftEarnings: (
     hospitalId: string,
@@ -42,8 +51,18 @@ function generateId(): string {
 export const useAppStore = create<AppState>()(
   persist(
     (set, get) => ({
+      userProfile: {
+        name: "Doctor",
+        title: "Healthcare Professional",
+      },
       hospitals: [],
       shifts: [],
+
+      updateUserProfile: (profile) => {
+        set((state) => ({
+          userProfile: { ...state.userProfile, ...profile },
+        }));
+      },
 
       addHospital: (hospitalData) => {
         const newHospital: Hospital = {
@@ -79,7 +98,7 @@ export const useAppStore = create<AppState>()(
           shiftData.casesCount,
           shiftData.customRate
         );
-        
+
         const newShift: Shift = {
           ...shiftData,
           id: generateId(),
@@ -96,9 +115,9 @@ export const useAppStore = create<AppState>()(
         set((state) => ({
           shifts: state.shifts.map((s) => {
             if (s.id !== id) return s;
-            
+
             const updatedShift = { ...s, ...updates, updatedAt: new Date() };
-            
+
             // Recalculate earnings if relevant fields changed
             if (updates.hospitalId || updates.casesCount !== undefined || updates.customRate !== undefined) {
               updatedShift.totalEarnings = get().calculateShiftEarnings(
@@ -107,7 +126,7 @@ export const useAppStore = create<AppState>()(
                 updatedShift.customRate
               );
             }
-            
+
             return updatedShift;
           }),
         }));
@@ -142,6 +161,7 @@ export const useAppStore = create<AppState>()(
     {
       name: "doctor-shift-manager",
       partialize: (state) => ({
+        userProfile: state.userProfile,
         hospitals: state.hospitals,
         shifts: state.shifts.map((s) => ({
           ...s,

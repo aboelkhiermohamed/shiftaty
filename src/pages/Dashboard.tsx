@@ -33,8 +33,7 @@ export default function Dashboard() {
       totalPatients,
       totalIncome,
       recentShifts: monthShifts
-        .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
-        .slice(0, 5),
+        .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()),
     };
   }, [shifts, currentMonth]);
 
@@ -125,7 +124,7 @@ export default function Dashboard() {
           animate={{ opacity: 1 }}
           transition={{ delay: 0.4 }}
         >
-          <h3 className="font-semibold text-foreground mb-3">Recent Shifts</h3>
+          <h3 className="font-semibold text-foreground mb-3">Monthly Shifts</h3>
 
           {monthlyStats.recentShifts.length === 0 ? (
             <div className="bg-card rounded-xl p-8 text-center border border-border">
