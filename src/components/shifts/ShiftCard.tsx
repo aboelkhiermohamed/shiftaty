@@ -1,6 +1,6 @@
 import { motion } from "framer-motion";
 import { format } from "date-fns";
-import { Clock, Building2, Users, ChevronRight, Stethoscope } from "lucide-react";
+import { Clock, Building2, Users, ChevronRight, Stethoscope, Trash2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Shift } from "@/types";
 import { useAppStore } from "@/stores/appStore";
@@ -13,7 +13,15 @@ interface ShiftCardProps {
 
 export function ShiftCard({ shift, onClick, delay = 0 }: ShiftCardProps) {
   const hospitals = useAppStore((state) => state.hospitals);
+  const deleteShift = useAppStore((state) => state.deleteShift);
   const hospital = hospitals.find((h) => h.id === shift.hospitalId);
+
+  const handleDelete = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (window.confirm("Are you sure you want to delete this shift?")) {
+      deleteShift(shift.id);
+    }
+  };
 
   return (
     <motion.div
@@ -60,6 +68,14 @@ export function ShiftCard({ shift, onClick, delay = 0 }: ShiftCardProps) {
                 </div>
               )}
             </div>
+
+            <button
+              onClick={handleDelete}
+              className="mt-2 text-xs flex items-center gap-1 text-destructive hover:text-destructive/80 transition-colors bg-destructive/10 px-2 py-1 rounded-md w-fit"
+            >
+              <Trash2 className="h-3 w-3" />
+              Delete
+            </button>
           </div>
         </div>
 
