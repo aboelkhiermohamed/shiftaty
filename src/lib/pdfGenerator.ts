@@ -48,7 +48,7 @@ export const generateMonthlyReport = ({
         // --- Header ---
         doc.setFontSize(22);
         doc.setTextColor(40, 40, 40);
-        doc.text("Doctor Shift Manager", pageWidth / 2, 20, { align: "center" });
+        doc.text("Shiftaty", pageWidth / 2, 20, { align: "center" });
 
         doc.setFontSize(16);
         doc.setTextColor(60, 60, 60);

@@ -31,6 +31,9 @@ interface AppState {
     casesCount: number,
     customRate?: number
   ) => number;
+
+  // Data management
+  importData: (data: AppState) => void;
 }
 
 const HOSPITAL_COLORS = [
@@ -156,6 +159,14 @@ export const useAppStore = create<AppState>()(
           default:
             return 0;
         }
+      },
+
+      importData: (data) => {
+        set({
+          userProfile: data.userProfile,
+          hospitals: data.hospitals,
+          shifts: data.shifts,
+        });
       },
     }),
     {

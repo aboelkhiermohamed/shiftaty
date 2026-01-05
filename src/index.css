@@ -140,6 +140,11 @@
 }
 
 @layer base {
+  :root {
+    --safe-area-inset-top: env(safe-area-inset-top, 0px);
+    --safe-area-inset-bottom: env(safe-area-inset-bottom, 0px);
+  }
+
   * {
     @apply border-border;
   }
@@ -203,6 +208,15 @@
   /* Bottom nav safe area */
   .safe-bottom {
     padding-bottom: env(safe-area-inset-bottom, 1rem);
+  }
+
+  /* Safe area utilities */
+  .pt-safe {
+    padding-top: var(--safe-area-inset-top);
+  }
+
+  .pb-safe {
+    padding-bottom: var(--safe-area-inset-bottom);
   }
 
   /* Mobile touch feedback */

@@ -88,30 +88,33 @@ export function IncomeBreakdown({ month }: IncomeBreakdownProps) {
         </ResponsiveContainer>
       </div>
 
-      <div className="mt-4 space-y-2">
+      <div className="mt-6 space-y-3">
         {data.map((item, index) => (
           <motion.div
             key={item.name}
             initial={{ opacity: 0, x: -10 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ delay: 0.3 + index * 0.05 }}
-            className="flex items-center justify-between text-sm"
+            className="flex flex-col gap-1 border-b border-border/50 last:border-0 pb-2 last:pb-0"
           >
-            <div className="flex items-center gap-2">
-              <div
-                className="w-3 h-3 rounded-full"
-                style={{ backgroundColor: item.color }}
-              />
-              <span className="text-foreground">{item.name}</span>
-              <span className="text-muted-foreground">({item.shifts} shifts)</span>
-            </div>
-            <div className="text-right">
-              <span className="font-medium text-foreground">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <div
+                  className="w-3 h-3 rounded-full shrink-0"
+                  style={{ backgroundColor: item.color }}
+                />
+                <span className="text-sm font-medium text-foreground truncate max-w-[180px]">
+                  {item.name}
+                </span>
+              </div>
+              <span className="text-sm font-bold text-foreground">
                 {item.value.toLocaleString()} EGP
               </span>
-              <span className="text-muted-foreground ml-2">
-                ({((item.value / totalIncome) * 100).toFixed(0)}%)
-              </span>
+            </div>
+
+            <div className="flex items-center justify-between text-xs text-muted-foreground pl-5">
+              <span>{item.shifts} shifts</span>
+              <span>{((item.value / totalIncome) * 100).toFixed(0)}%</span>
             </div>
           </motion.div>
         ))}

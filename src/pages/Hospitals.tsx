@@ -115,89 +115,6 @@ export default function Hospitals() {
       <PageHeader
         title="Hospitals"
         subtitle="Manage your hospitals and payment rates"
-        action={
-          <Dialog
-            open={isOpen}
-            onOpenChange={(open) => {
-              setIsOpen(open);
-              if (!open) resetForm();
-            }}
-          >
-            <DialogTrigger asChild>
-              <Button size="icon" className="h-9 w-9 rounded-xl">
-                <Plus className="h-5 w-5" />
-              </Button>
-            </DialogTrigger>
-            <DialogContent className="sm:max-w-md">
-              <DialogHeader>
-                <DialogTitle>
-                  {editingId ? "Edit Hospital" : "Add Hospital"}
-                </DialogTitle>
-              </DialogHeader>
-              <div className="space-y-4 py-4">
-                <div>
-                  <Label htmlFor="name">Hospital Name</Label>
-                  <Input
-                    id="name"
-                    value={name}
-                    onChange={(e) => setName(e.target.value)}
-                    placeholder="e.g., City General Hospital"
-                    className="mt-1.5"
-                  />
-                </div>
-
-                <div>
-                  <Label>Payment Model</Label>
-                  <Select
-                    value={paymentModel}
-                    onValueChange={(v) => setPaymentModel(v as PaymentModel)}
-                  >
-                    <SelectTrigger className="mt-1.5">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="fixed">Fixed Rate per Shift</SelectItem>
-                      <SelectItem value="per_patient">Per Patient/Case</SelectItem>
-                      <SelectItem value="mixed">Mixed (Fixed + Per Patient)</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                {(paymentModel === "fixed" || paymentModel === "mixed") && (
-                  <div>
-                    <Label htmlFor="fixedRate">Fixed Rate (EGP)</Label>
-                    <Input
-                      id="fixedRate"
-                      type="number"
-                      value={fixedRate}
-                      onChange={(e) => setFixedRate(e.target.value)}
-                      placeholder="e.g., 800"
-                      className="mt-1.5"
-                    />
-                  </div>
-                )}
-
-                {(paymentModel === "per_patient" || paymentModel === "mixed") && (
-                  <div>
-                    <Label htmlFor="perPatientRate">Rate per Patient (EGP)</Label>
-                    <Input
-                      id="perPatientRate"
-                      type="number"
-                      value={perPatientRate}
-                      onChange={(e) => setPerPatientRate(e.target.value)}
-                      placeholder="e.g., 150"
-                      className="mt-1.5"
-                    />
-                  </div>
-                )}
-
-                <Button onClick={handleSubmit} className="w-full">
-                  {editingId ? "Update Hospital" : "Add Hospital"}
-                </Button>
-              </div>
-            </DialogContent>
-          </Dialog>
-        }
       />
 
       <div className="px-4">
@@ -287,6 +204,96 @@ export default function Hospitals() {
           </div>
         )}
       </div>
+
+
+      {/* Floating Action Button for Adding Hospital */}
+      <Dialog
+        open={isOpen}
+        onOpenChange={(open) => {
+          setIsOpen(open);
+          if (!open) resetForm();
+        }}
+      >
+        <DialogTrigger asChild>
+          <motion.div
+            initial={{ scale: 0 }}
+            animate={{ scale: 1 }}
+            className="fixed bottom-24 right-6 z-50"
+          >
+            <Button size="icon" className="h-14 w-14 rounded-full shadow-lg bg-primary hover:bg-primary/90 text-primary-foreground">
+              <Plus className="h-6 w-6" />
+            </Button>
+          </motion.div>
+        </DialogTrigger>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>
+              {editingId ? "Edit Hospital" : "Add Hospital"}
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div>
+              <Label htmlFor="name">Hospital Name</Label>
+              <Input
+                id="name"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                placeholder="e.g., City General Hospital"
+                className="mt-1.5"
+              />
+            </div>
+
+            <div>
+              <Label>Payment Model</Label>
+              <Select
+                value={paymentModel}
+                onValueChange={(v) => setPaymentModel(v as PaymentModel)}
+              >
+                <SelectTrigger className="mt-1.5">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="fixed">Fixed Rate per Shift</SelectItem>
+                  <SelectItem value="per_patient">Per Patient/Case</SelectItem>
+                  <SelectItem value="mixed">Mixed (Fixed + Per Patient)</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            {(paymentModel === "fixed" || paymentModel === "mixed") && (
+              <div>
+                <Label htmlFor="fixedRate">Fixed Rate (EGP)</Label>
+                <Input
+                  id="fixedRate"
+                  type="number"
+                  value={fixedRate}
+                  onChange={(e) => setFixedRate(e.target.value)}
+                  placeholder="e.g., 800"
+                  className="mt-1.5"
+                />
+              </div>
+            )}
+
+            {(paymentModel === "per_patient" || paymentModel === "mixed") && (
+              <div>
+                <Label htmlFor="perPatientRate">Rate per Patient (EGP)</Label>
+                <Input
+                  id="perPatientRate"
+                  type="number"
+                  value={perPatientRate}
+                  onChange={(e) => setPerPatientRate(e.target.value)}
+                  placeholder="e.g., 150"
+                  className="mt-1.5"
+                />
+              </div>
+            )}
+
+            <Button onClick={handleSubmit} className="w-full">
+              {editingId ? "Update Hospital" : "Add Hospital"}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </AppLayout>
   );
 }
