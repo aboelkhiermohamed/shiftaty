@@ -38,6 +38,7 @@ export default function AddShift() {
   const [notes, setNotes] = useState("");
   const [customRate, setCustomRate] = useState("");
   const [useCustomRate, setUseCustomRate] = useState(false);
+  const [itemCounts, setItemCounts] = useState<Record<string, number>>({});
 
   const hospitals = useAppStore((state) => state.hospitals);
   const addShift = useAppStore((state) => state.addShift);
@@ -47,13 +48,15 @@ export default function AddShift() {
 
   const selectedHospital = hospitals.find((h) => h.id === hospitalId);
 
-  const estimatedEarnings = hospitalId
-    ? calculateShiftEarnings(
+  const estimatedEarnings =
+    hospitalId && selectedHospital
+      ? calculateShiftEarnings(
         hospitalId,
         parseInt(casesCount) || 0,
-        useCustomRate ? parseFloat(customRate) || undefined : undefined
+        useCustomRate ? parseFloat(customRate) || undefined : undefined,
+        selectedHospital.paymentModel === "detailed" ? itemCounts : undefined
       )
-    : 0;
+      : 0;
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -86,6 +89,7 @@ export default function AddShift() {
       includesOutpatient,
       notes: notes.trim() || undefined,
       customRate: useCustomRate ? parseFloat(customRate) || undefined : undefined,
+      itemCounts: selectedHospital?.paymentModel === "detailed" ? itemCounts : undefined,
     });
 
     toast({
@@ -220,37 +224,65 @@ export default function AddShift() {
               </div>
             </motion.div>
 
-            {/* Cases & Procedures */}
+            {/* Cases & Procedures OR Dynamic Items */}
             <motion.div
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.2 }}
-              className="grid grid-cols-2 gap-4"
             >
-              <div>
-                <Label htmlFor="cases">Cases/Patients</Label>
-                <Input
-                  id="cases"
-                  type="number"
-                  min="0"
-                  value={casesCount}
-                  onChange={(e) => setCasesCount(e.target.value)}
-                  placeholder="0"
-                  className="mt-1.5"
-                />
-              </div>
-              <div>
-                <Label htmlFor="procedures">Procedures</Label>
-                <Input
-                  id="procedures"
-                  type="number"
-                  min="0"
-                  value={proceduresCount}
-                  onChange={(e) => setProceduresCount(e.target.value)}
-                  placeholder="0"
-                  className="mt-1.5"
-                />
-              </div>
+              {selectedHospital?.paymentModel === "detailed" ? (
+                <div className="space-y-3">
+                  <Label>Service Counts</Label>
+                  <div className="grid grid-cols-2 gap-4">
+                    {selectedHospital.itemRates?.map((item) => (
+                      <div key={item.id}>
+                        <Label className="text-xs text-muted-foreground mb-1.5 block">
+                          {item.name} ({item.rate} EGP)
+                        </Label>
+                        <Input
+                          type="number"
+                          min="0"
+                          placeholder="0"
+                          value={itemCounts[item.id] || ""}
+                          onChange={(e) =>
+                            setItemCounts({
+                              ...itemCounts,
+                              [item.id]: parseInt(e.target.value) || 0,
+                            })
+                          }
+                        />
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ) : (
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label htmlFor="cases">Cases/Patients</Label>
+                    <Input
+                      id="cases"
+                      type="number"
+                      min="0"
+                      value={casesCount}
+                      onChange={(e) => setCasesCount(e.target.value)}
+                      placeholder="0"
+                      className="mt-1.5"
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="procedures">Procedures</Label>
+                    <Input
+                      id="procedures"
+                      type="number"
+                      min="0"
+                      value={proceduresCount}
+                      onChange={(e) => setProceduresCount(e.target.value)}
+                      placeholder="0"
+                      className="mt-1.5"
+                    />
+                  </div>
+                </div>
+              )}
             </motion.div>
 
             {/* Outpatient Toggle */}

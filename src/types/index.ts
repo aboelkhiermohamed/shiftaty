@@ -1,11 +1,20 @@
-export type PaymentModel = "fixed" | "per_patient" | "mixed";
+export type PaymentModel = "fixed" | "per_patient" | "mixed" | "detailed";
 
 export interface Hospital {
   id: string;
   name: string;
   paymentModel: PaymentModel;
-  fixedRate: number; // Amount per shift
-  perPatientRate: number; // Amount per patient/case
+  fixedRate: number; // Amount per shift (Used for 'fixed' and 'mixed')
+  perPatientRate: number; // Amount per patient/case (Used for 'per_patient' and 'mixed')
+
+  // New fields for "detailed" model
+  fixedSalary?: number; // Base pay per shift
+  itemRates?: {
+    id: string;
+    name: string;
+    rate: number;
+  }[];
+
   color?: string;
   createdAt: Date;
   updatedAt: Date;
@@ -22,6 +31,10 @@ export interface Shift {
   includesOutpatient: boolean;
   notes?: string;
   customRate?: number; // Override hospital default rate
+
+  // New fields for "detailed" model
+  itemCounts?: Record<string, number>; // Maps itemRate.id to count
+
   totalEarnings: number;
   createdAt: Date;
   updatedAt: Date;

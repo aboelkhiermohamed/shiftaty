@@ -1,7 +1,7 @@
 <?xml version='1.0' encoding='utf-8'?>
 <resources>
     <string name="app_name">Shiftaty</string>
-    <string name="title_activity_main">Doctor Shift Manager</string>
+    <string name="title_activity_main">Shiftaty</string>
     <string name="package_name">app.lovable.bbce7db744bc427ead7ef82349d2a426</string>
     <string name="custom_url_scheme">app.lovable.bbce7db744bc427ead7ef82349d2a426</string>
 </resources>

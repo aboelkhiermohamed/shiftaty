@@ -76,7 +76,7 @@ export default function Dashboard() {
       <div className="px-4 grid grid-cols-2 gap-3">
         <StatCard
           title="Total Income"
-          value={`${monthlyStats.totalIncome.toLocaleString()}`}
+          value={`${(monthlyStats.totalIncome || 0).toLocaleString()}`}
           subtitle="EGP this month"
           icon={Wallet}
           variant="primary"
@@ -102,8 +102,8 @@ export default function Dashboard() {
           title="Avg/Shift"
           value={
             monthlyStats.totalShifts > 0
-              ? Math.round(monthlyStats.totalIncome / monthlyStats.totalShifts).toLocaleString()
-              : 0
+              ? Math.round((monthlyStats.totalIncome || 0) / monthlyStats.totalShifts).toLocaleString()
+              : "0"
           }
           subtitle="EGP"
           icon={TrendingUp}
