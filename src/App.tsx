@@ -3,7 +3,8 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { ThemeProvider } from "@/components/theme-provider";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route, useNavigate } from "react-router-dom"; // Added useNavigate
+import { BrowserRouter, Routes, Route, useNavigate, Navigate } from "react-router-dom"; // Added Navigate
+
 import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
 import Dashboard from "./pages/Dashboard";
@@ -101,6 +102,7 @@ const App = () => (
           <DeepLinkListener /> {/* Listen for deep links globally */}
           <Routes>
             <Route path="/login" element={<Login />} />
+            <Route path="/auth/callback" element={<Navigate to="/" replace />} />
             {/* ... routes ... */}
             <Route
               path="/"
