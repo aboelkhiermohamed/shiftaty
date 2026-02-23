@@ -3,20 +3,28 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { ThemeProvider } from "@/components/theme-provider";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route, useNavigate, Navigate } from "react-router-dom"; // Added Navigate
+import { HashRouter, Routes, Route, useNavigate, Navigate } from "react-router-dom"; // Changed to HashRouter
 
 import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
 import Dashboard from "./pages/Dashboard";
 import AddShift from "./pages/AddShift";
+import EditShift from "./pages/EditShift";
 import Hospitals from "./pages/Hospitals";
 import Settings from "./pages/Settings";
+import Profile from "./pages/Profile";
 import Login from "./pages/Login";
 import NotFound from "./pages/NotFound";
 import { Loader2 } from "lucide-react";
 import { App as CapacitorApp } from "@capacitor/app"; // Import Capacitor App
 
 const queryClient = new QueryClient();
+
+// Debug logging for Auth Redirect
+console.log("Current URL:", window.location.href);
+console.log("Current Hash:", window.location.hash);
+console.log("Current Search:", window.location.search);
+
 
 // Deep Link Handler Component
 const DeepLinkListener = () => {
@@ -98,7 +106,7 @@ const App = () => (
         <Toaster />
         <Sonner />
         <AnnouncementDialog /> {/* Add the dialog here */}
-        <BrowserRouter>
+        <HashRouter>
           <DeepLinkListener /> {/* Listen for deep links globally */}
           <Routes>
             <Route path="/login" element={<Login />} />
@@ -136,9 +144,25 @@ const App = () => (
                 </ProtectedRoute>
               }
             />
+            <Route
+              path="/edit-shift/:id"
+              element={
+                <ProtectedRoute>
+                  <EditShift />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/profile"
+              element={
+                <ProtectedRoute>
+                  <Profile />
+                </ProtectedRoute>
+              }
+            />
             <Route path="*" element={<NotFound />} />
           </Routes>
-        </BrowserRouter>
+        </HashRouter>
       </TooltipProvider>
     </ThemeProvider>
   </QueryClientProvider>

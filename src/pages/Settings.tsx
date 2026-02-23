@@ -8,6 +8,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useAppStore } from "@/stores/appStore";
 import { supabase } from "@/lib/supabase";
 import { useTheme } from "next-themes";
+import { useNavigate } from "react-router-dom";
 import {
   Dialog,
   DialogContent,
@@ -71,11 +72,7 @@ function SettingItem({ icon: Icon, title, subtitle, onClick, trailing, delay = 0
 
 export default function Settings() {
   const { theme, setTheme } = useTheme();
-
-  // Profile Edit State
-  const [isProfileOpen, setIsProfileOpen] = useState(false);
-  const [editName, setEditName] = useState("");
-  const [editTitle, setEditTitle] = useState("");
+  const navigate = useNavigate();
 
   // Report State
   const [isReportDialogOpen, setIsReportDialogOpen] = useState(false);
@@ -97,21 +94,6 @@ export default function Settings() {
   const importData = useAppStore((state) => state.importData);
   const notificationsEnabled = useAppStore((state) => state.notificationsEnabled);
   const setNotificationsEnabled = useAppStore((state) => state.setNotificationsEnabled);
-
-  const handleEditProfile = () => {
-    setEditName(userProfile.name);
-    setEditTitle(userProfile.title);
-    setIsProfileOpen(true);
-  };
-
-  const handleSaveProfile = () => {
-    updateUserProfile({ name: editName, title: editTitle });
-    setIsProfileOpen(false);
-    toast({
-      title: "Profile Updated",
-      description: "Your profile details have been saved.",
-    });
-  };
 
 
   const handleExportPDF = async () => {
@@ -288,13 +270,13 @@ export default function Settings() {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           className="bg-card rounded-2xl p-5 border border-border mb-6 cursor-pointer hover:bg-secondary/50 transition-colors"
-          onClick={handleEditProfile}
+          onClick={() => navigate("/profile")}
         >
           <div className="flex items-center gap-4">
             <div className="w-16 h-16 rounded-full bg-gradient-to-br from-primary to-accent flex items-center justify-center">
               <User className="h-8 w-8 text-primary-foreground" />
             </div>
-            <div>
+            <div className="flex-1">
               <h2 className="text-lg font-semibold text-foreground">{userProfile.name}</h2>
               <p className="text-sm text-muted-foreground">
                 {userProfile.title}
@@ -303,6 +285,7 @@ export default function Settings() {
                 {hospitals.length} hospitals • {shifts.length} shifts logged
               </p>
             </div>
+            <ChevronRight className="h-5 w-5 text-muted-foreground" />
           </div>
         </motion.div>
 
@@ -487,41 +470,7 @@ export default function Settings() {
           </p>
         </motion.div>
       </div>
-      {/* Profile Edit Dialog */}
-      <Dialog open={isProfileOpen} onOpenChange={setIsProfileOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Edit Profile</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4 py-4">
-            <div className="space-y-2">
-              <Label htmlFor="name">Display Name</Label>
-              <Input
-                id="name"
-                value={editName}
-                onChange={(e) => setEditName(e.target.value)}
-                placeholder="Dr. Name"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="title">Professional Title</Label>
-              <Input
-                id="title"
-                value={editTitle}
-                onChange={(e) => setEditTitle(e.target.value)}
-                placeholder="e.g. General Practitioner"
-              />
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setIsProfileOpen(false)}>
-              Cancel
-            </Button>
-            <Button onClick={handleSaveProfile}>Save Changes</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-      {/* Report Month Selection Dialog */}
+
       <Dialog open={isReportDialogOpen} onOpenChange={setIsReportDialogOpen}>
         <DialogContent>
           <DialogHeader>

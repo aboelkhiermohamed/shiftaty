@@ -7,6 +7,8 @@ import { LocalNotifications } from "@capacitor/local-notifications";
 export interface UserProfile {
   name: string;
   title: string;
+  email: string;
+  gender: string;
 }
 
 interface AppState {
@@ -92,6 +94,8 @@ export const useAppStore = create<AppState>()(
       userProfile: {
         name: "Doctor",
         title: "Healthcare Professional",
+        email: "",
+        gender: "",
       },
       hospitals: [],
       shifts: [],

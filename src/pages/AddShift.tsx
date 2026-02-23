@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
 import { format } from "date-fns";
-import { CalendarIcon, Clock, Plus, AlertCircle } from "lucide-react";
+import { CalendarIcon, Clock, Plus, AlertCircle, Timer } from "lucide-react";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { Button } from "@/components/ui/button";
@@ -22,10 +22,27 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from "@/components/ui/dialog";
 import { useAppStore } from "@/stores/appStore";
 import { useToast } from "@/hooks/use-toast";
 import { useNavigate } from "react-router-dom";
 import { cn } from "@/lib/utils";
+
+/** Returns shift duration in hours (handles overnight shifts). */
+function calcShiftHours(start: string, end: string): number {
+  const [sh, sm] = start.split(":").map(Number);
+  const [eh, em] = end.split(":").map(Number);
+  let mins = (eh * 60 + em) - (sh * 60 + sm);
+  if (mins <= 0) mins += 24 * 60; // overnight
+  return Math.round((mins / 60) * 100) / 100;
+}
 
 export default function AddShift() {
   const [hospitalId, setHospitalId] = useState("");
@@ -39,6 +56,11 @@ export default function AddShift() {
   const [customRate, setCustomRate] = useState("");
   const [useCustomRate, setUseCustomRate] = useState(false);
   const [itemCounts, setItemCounts] = useState<Record<string, number>>({});
+
+  // Partial-shift dialog
+  const [partialDialogOpen, setPartialDialogOpen] = useState(false);
+  const [partialHours, setPartialHours] = useState(0);
+  const [pendingCustomRate, setPendingCustomRate] = useState<number | undefined>(undefined);
 
   const hospitals = useAppStore((state) => state.hospitals);
   const addShift = useAppStore((state) => state.addShift);
@@ -58,27 +80,7 @@ export default function AddShift() {
       )
       : 0;
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-
-    if (!hospitalId) {
-      toast({
-        title: "Error",
-        description: "Please select a hospital",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    if (!date) {
-      toast({
-        title: "Error",
-        description: "Please select a date",
-        variant: "destructive",
-      });
-      return;
-    }
-
+  const doAddShift = (overrideRate?: number) => {
     addShift({
       hospitalId,
       date,
@@ -88,16 +90,53 @@ export default function AddShift() {
       proceduresCount: parseInt(proceduresCount) || 0,
       includesOutpatient,
       notes: notes.trim() || undefined,
-      customRate: useCustomRate ? parseFloat(customRate) || undefined : undefined,
+      customRate: overrideRate,
       itemCounts: selectedHospital?.paymentModel === "detailed" ? itemCounts : undefined,
     });
-
+    const finalEarnings = overrideRate ?? estimatedEarnings;
     toast({
       title: "Shift Added",
-      description: `Shift logged successfully - ${estimatedEarnings.toLocaleString()} EGP`,
+      description: `Shift logged successfully - ${finalEarnings.toLocaleString()} EGP`,
     });
-
     navigate("/");
+  };
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+
+    if (!hospitalId) {
+      toast({ title: "Error", description: "Please select a hospital", variant: "destructive" });
+      return;
+    }
+    if (!date) {
+      toast({ title: "Error", description: "Please select a date", variant: "destructive" });
+      return;
+    }
+
+    const hours = calcShiftHours(startTime, endTime);
+
+    // If shift is less than 24h and NOT using a manual custom rate, intercept
+    if (hours < 24 && !useCustomRate) {
+      const proRataRate = Math.round((estimatedEarnings / 24) * hours);
+      setPartialHours(hours);
+      setPendingCustomRate(proRataRate);
+      setPartialDialogOpen(true);
+      return;
+    }
+
+    doAddShift(useCustomRate ? parseFloat(customRate) || undefined : undefined);
+  };
+
+  // User confirmed hourly calculation
+  const handleConfirmHourly = () => {
+    setPartialDialogOpen(false);
+    doAddShift(pendingCustomRate);
+  };
+
+  // User wants the full fixed rate
+  const handleConfirmFixed = () => {
+    setPartialDialogOpen(false);
+    doAddShift(useCustomRate ? parseFloat(customRate) || undefined : undefined);
   };
 
   return (
@@ -380,6 +419,67 @@ export default function AddShift() {
           </>
         )}
       </form>
+
+      {/* Partial Shift Dialog */}
+      <Dialog open={partialDialogOpen} onOpenChange={setPartialDialogOpen}>
+        <DialogContent className="mx-4 rounded-2xl">
+          <DialogHeader>
+            <div className="flex items-center gap-2 mb-1">
+              <div className="w-10 h-10 rounded-full bg-warning/20 flex items-center justify-center">
+                <Timer className="h-5 w-5 text-warning" />
+              </div>
+              <DialogTitle>Partial Shift Detected</DialogTitle>
+            </div>
+            <DialogDescription className="text-left pt-1">
+              Your shift is{" "}
+              <span className="font-bold text-foreground">
+                {partialHours} hour{partialHours !== 1 ? "s" : ""}
+              </span>{" "}
+              out of a full 24-hour shift.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-3 py-2">
+            {/* Hourly option */}
+            <button
+              onClick={handleConfirmHourly}
+              className="w-full text-left bg-primary/10 border border-primary/30 rounded-xl p-4 hover:bg-primary/20 transition-colors touch-feedback"
+            >
+              <p className="font-semibold text-foreground text-sm">
+                Calculate by Hours
+              </p>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                {partialHours}h ÷ 24h ={" "}
+                <span className="font-medium text-primary">
+                  {(pendingCustomRate ?? 0).toLocaleString()} EGP
+                </span>
+              </p>
+            </button>
+
+            {/* Fixed option */}
+            <button
+              onClick={handleConfirmFixed}
+              className="w-full text-left bg-muted/50 border border-border rounded-xl p-4 hover:bg-muted transition-colors touch-feedback"
+            >
+              <p className="font-semibold text-foreground text-sm">
+                Use Full Rate
+              </p>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                Keep the hospital's fixed rate —{" "}
+                <span className="font-medium text-foreground">
+                  {(estimatedEarnings).toLocaleString()} EGP
+                </span>
+              </p>
+            </button>
+          </div>
+
+          <DialogFooter>
+            <Button variant="ghost" size="sm" onClick={() => setPartialDialogOpen(false)}>
+              Cancel
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </AppLayout>
   );
 }

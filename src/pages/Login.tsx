@@ -100,7 +100,7 @@ export default function Login() {
                 <div className="text-center space-y-2">
                     <div className="h-24 w-24 bg-primary/10 rounded-2xl flex items-center justify-center mx-auto mb-6 p-4">
                         <img
-                            src="/logo.png"
+                            src="./logo.png"
                             alt="Shiftaty Logo"
                             className="w-full h-full object-contain"
                         />
@@ -209,7 +209,7 @@ export default function Login() {
                                     options: {
                                         redirectTo: Capacitor.isNativePlatform()
                                             ? `shiftaty://auth/callback`
-                                            : `${window.location.origin}/auth/callback`
+                                            : `${window.location.origin}${window.location.pathname}` // Redirect to current path (app root)
                                     }
                                 });
                                 if (error) throw error;
@@ -244,7 +244,7 @@ export default function Login() {
                         className="w-full"
                         onClick={() => {
                             localStorage.setItem("isGuest", "true");
-                            navigate("/");
+                            window.location.replace("/");
                         }}
                     >
                         Continue as Guest
