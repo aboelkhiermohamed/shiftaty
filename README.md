@@ -1,73 +1,123 @@
-# Welcome to your Lovable project
+# 🕒 Shiftaty
 
-## Project info
+**Shiftaty** is a professional-grade shift and salary management ecosystem built for healthcare workers and shift-based professionals. It combines a high-performance web core with native mobile capabilities to provide real-time earnings tracking, automated financial calculations, and secure cloud synchronization.
 
-**URL**: https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID
+---
 
-## How can I edit this code?
+## ✨ Key Features & Deep Dive
 
-There are several ways of editing your application.
+### 💰 Smart Salary Engine
+Shiftaty doesn't just track hours; it understands complex payment structures.
+- **Multiple Payment Models**: Support for Fixed Rate, Per Patient, Mixed (Fixed + Per Patient), and Detailed (item-based) models.
+- **Precision Calculations**: Real-time calculation of total earnings including base pay and custom bonuses.
+- **Hospital-Specific Rules**: Configure unique payment structures for every workplace you visit.
 
-**Use Lovable**
+### 📊 Dynamic Business Intelligence
+Visualize your productivity and financial growth through data.
+- **Monthly Breakdowns**: Detailed views of your earnings per month and per workplace.
+- **Trend Visualizations**: Beautiful interactive charts powered by `Recharts` to track your progress over time.
+- **Export Capabilities**: Generate professional PDF reports of your shift data for record-keeping or sharing.
 
-Simply visit the [Lovable Project](https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID) and start prompting.
+### 📱 Native Mobile Core
+Built on **Capacitor**, Shiftaty provides a true app experience on mobile devices.
+- **Push & Local Notifications**: Reminders for upcoming shifts and encouraging messages when you finish work.
+- **Native File System**: High-performance local storage ensuring your data is accessible even without an internet connection.
+- **Adaptive UI**: A premium "Glassmorphism" interface that adjusts perfectly between Light and Dark modes.
 
-Changes made via Lovable will be committed automatically to this repo.
+### ☁️ Enterprise-Grade Sync
+Your data follows you everywhere.
+- **Supabase Integration**: Real-time, secure synchronization between your PC, Android, and iOS devices.
+- **Offline-First**: Add shifts while at work; they'll sync automatically as soon as you're back online.
 
-**Use your preferred IDE**
+---
 
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
+## 🚀 Tech Stack
 
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
+| Category | Technology |
+| :--- | :--- |
+| **Core** | React 18, Vite 5, TypeScript 5 |
+| **State** | Zustand (with Persistence) |
+| **Backend** | Supabase (PostgreSQL, Auth, Edge Functions) |
+| **Mobile** | Capacitor 8 (Android & iOS) |
+| **Styling** | Tailwind CSS, shadcn/ui, Framer Motion |
+| **Utilities** | Lucide Icons, Recharts, date-fns, jsPDF |
 
-Follow these steps:
+---
 
-```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
+## 📂 Project Structure
 
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
-
-# Step 3: Install the necessary dependencies.
-npm i
-
-# Step 4: Start the development server with auto-reloading and an instant preview.
-npm run dev
+```text
+shiftaty/
+├── android/              # Native Android project files
+├── ios/                  # Native iOS project files
+├── src/
+│   ├── components/       # UI Components (shadcn/ui + custom)
+│   │   ├── dashboard/    # Specialized dashboard charts/cards
+│   │   ├── layout/       # Navigation and shell components
+│   │   └── shifts/       # Shift-related forms and views
+│   ├── hooks/            # Custom React hooks
+│   ├── lib/              # Utility libraries (Supabase, PDF Gen)
+│   ├── pages/            # View-level components (Index, Login, Settings)
+│   ├── stores/           # Zustand state management (appStore.ts)
+│   └── types/            # TypeScript interfaces & enums
+├── public/               # Static assets (icons, manifest)
+├── capacitor.config.ts   # Mobile configuration
+└── tailwind.config.ts    # Styling theme configuration
 ```
 
-**Edit a file directly in GitHub**
+---
 
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
+## 🛠️ Detailed Setup
 
-**Use GitHub Codespaces**
+### 1. Repository Setup
+```sh
+git clone https://github.com/aboelkhiermohamed/shiftaty.git
+cd shiftaty
+npm install
+```
 
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
+### 2. Environment Configuration
+Create a `.env` file in the root with your Supabase credentials. These are essential for cloud sync and authentication features.
+```env
+VITE_SUPABASE_URL=https://your-project-id.supabase.co
+VITE_SUPABASE_ANON_KEY=your-anon-key
+```
 
-## What technologies are used for this project?
+### 3. Database Migration (Optional)
+Shiftaty expects a specific schema in Supabase. Ensure you have the `profiles`, `hospitals`, and `shifts` tables configured with RLS (Row Level Security) enabled.
 
-This project is built with:
+---
 
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
+## 📱 Mobile Development
 
-## How can I deploy this project?
+### Android
+- **Prerequisites**: Android Studio & SDK 33+.
+- **Build & Sync**:
+  ```sh
+  npm run build
+  npx cap sync android
+  npx cap open android
+  ```
 
-Simply open [Lovable](https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID) and click on Share -> Publish.
+### iOS
+- **Prerequisites**: macOS & Xcode 15+.
+- **Build & Sync**:
+  ```sh
+  npm run build
+  npx cap sync ios
+  npx cap open ios
+  ```
 
-## Can I connect a custom domain to my Lovable project?
+---
 
-Yes, you can!
+## 💡 Troubleshooting
 
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
+- **Sync Issues**: Ensure `VITE_SUPABASE_URL` is correctly formatted. Check the browser console for "Net Error" if offline.
+- **Build Errors**: If `npm run build` fails, try deleting `node_modules` and `package-lock.json` then run `npm install` again.
+- **Mobile Splash Screen**: To update icons, use the `generate-icons.js` utility script included in the root.
 
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/features/custom-domain#custom-domain)
+---
+
+## 📄 License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
