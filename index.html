@@ -6,34 +6,61 @@
   <meta name="viewport"
     content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
   <meta name="theme-color" media="(prefers-color-scheme: light)" content="#ffffff" />
-  <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#0f172a" />
-  <!-- TODO: Set the document title to the name of your application -->
+  <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#0A0D11" />
   <title>Shiftaty</title>
+  <style>
+    html, body {
+      background-color: #0A0D11 !important;
+      margin: 0;
+      padding: 0;
+    }
+    .boot-skeleton {
+      padding: 24px 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+      max-width: 448px;
+      margin: 0 auto;
+    }
+    .shimmer {
+      background: linear-gradient(90deg, rgba(30, 41, 59, 0.4) 25%, rgba(51, 65, 85, 0.8) 50%, rgba(30, 41, 59, 0.4) 75%);
+      background-size: 200% 100%;
+      animation: shimmer 1.5s infinite linear;
+      border-radius: 12px;
+    }
+    @keyframes shimmer {
+      0% { background-position: -200% 0; }
+      100% { background-position: 200% 0; }
+    }
+  </style>
   <meta name="description" content="Shiftaty - Shift Management App" />
-  <meta name="author" content="Mohamed Abo Elkhier" />
-  <link rel="icon" type="image/png" href="/shiftaty/logo.png?v=1.4.0" />
-  <link rel="manifest" href="/shiftaty/manifest.json?v=1.4.0" />
-  <link rel="apple-touch-icon" href="/shiftaty/icons/icon-192.png?v=1.4.0" />
-  <meta name="mobile-web-app-capable" content="yes" />
-  <meta name="apple-mobile-web-app-capable" content="yes" />
-  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-  <meta name="apple-mobile-web-app-title" content="Shiftaty" />
-
-  <!-- TODO: Update og:title to match your application name -->
-  <meta property="og:title" content="Shiftaty" />
-  <meta property="og:description" content="Shiftaty - Shift Management App" />
-  <meta property="og:type" content="website" />
-  <meta property="og:image" content="/logo.png" />
-
-  <meta name="twitter:card" content="summary_large_image" />
-  <meta name="twitter:site" content="@Shiftaty" />
-  <meta name="twitter:image" content="/logo.png" />
-  <script type="module" crossorigin src="/shiftaty/assets/index-y-wRBngx.js"></script>
-  <link rel="stylesheet" crossorigin href="/shiftaty/assets/index-BP6s8ZoB.css">
+  <script type="module" crossorigin src="/shiftaty/assets/index-DUBCVdHb.js"></script>
+  <link rel="stylesheet" crossorigin href="/shiftaty/assets/index-DEdl-sur.css">
 </head>
 
 <body>
-  <div id="root"></div>
+  <div id="root">
+    <div class="boot-skeleton">
+      <div style="display: flex; justify-content: space-between; margin-top: 24px;">
+        <div class="shimmer" style="height: 32px; width: 140px;"></div>
+        <div class="shimmer" style="height: 40px; width: 40px; border-radius: 50%;"></div>
+      </div>
+      <div class="shimmer" style="height: 48px; width: 180px; border-radius: 16px;"></div>
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+        <div class="shimmer" style="height: 128px; border-radius: 20px;"></div>
+        <div style="display: flex; flex-direction: column; gap: 12px;">
+          <div class="shimmer" style="height: 58px; border-radius: 20px;"></div>
+          <div class="shimmer" style="height: 58px; border-radius: 20px;"></div>
+        </div>
+      </div>
+      <div class="shimmer" style="height: 160px; border-radius: 20px;"></div>
+      <div style="display: flex; flex-direction: column; gap: 16px;">
+        <div class="shimmer" style="height: 20px; width: 100px;"></div>
+        <div class="shimmer" style="height: 96px; border-radius: 20px;"></div>
+        <div class="shimmer" style="height: 96px; border-radius: 20px;"></div>
+      </div>
+    </div>
+  </div>
 </body>
 
 </html>
