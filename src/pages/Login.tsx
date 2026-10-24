@@ -298,7 +298,7 @@ export default function Login() {
                         className="w-full"
                         onClick={() => {
                             localStorage.setItem("isGuest", "true");
-                            window.location.replace("/");
+                            navigate("/");
                         }}
                     >
                         Continue as Guest
