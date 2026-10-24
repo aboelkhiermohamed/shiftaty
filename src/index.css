@@ -141,8 +141,8 @@
 
 @layer base {
   :root {
-    --safe-area-inset-top: env(safe-area-inset-top, 24px);
-    --safe-area-inset-bottom: env(safe-area-inset-bottom, 16px);
+    --safe-area-inset-top: env(safe-area-inset-top, 20px);
+    --safe-area-inset-bottom: env(safe-area-inset-bottom, 0px);
   }
 
   * {
@@ -154,18 +154,17 @@
     font-family: 'Plus Jakarta Sans', sans-serif;
   }
 
-  /* Custom scrollbar */
+  /* Hide scrollbar for Chrome, Safari and Opera */
   ::-webkit-scrollbar {
-    width: 6px;
-    height: 6px;
+    display: none !important;
+    width: 0 !important;
+    height: 0 !important;
   }
 
-  ::-webkit-scrollbar-track {
-    @apply bg-muted rounded-full;
-  }
-
-  ::-webkit-scrollbar-thumb {
-    @apply bg-primary/30 rounded-full hover:bg-primary/50 transition-colors;
+  /* Hide scrollbar for IE, Edge and Firefox */
+  html, body, * {
+    -ms-overflow-style: none !important;
+    scrollbar-width: none !important;
   }
 }
 

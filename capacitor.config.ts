@@ -6,8 +6,9 @@ const config: CapacitorConfig = {
   webDir: 'dist',
   plugins: {
     SplashScreen: {
-      launchShowDuration: 2000,
-      backgroundColor: "#ffffff",
+      launchShowDuration: 500,
+      launchAutoHide: true,
+      backgroundColor: "#0A0D11",
       androidSplashResourceName: "splash",
       showSpinner: false,
       androidScaleType: "CENTER_CROP",
@@ -17,7 +18,13 @@ const config: CapacitorConfig = {
     StatusBar: {
       overlaysWebView: true,
       style: "DARK",
-      backgroundColor: "#00000000",
+      backgroundColor: "#0A0D11",
+    },
+    LocalNotifications: {
+      smallIcon: "logo_large",
+      iconColor: "#3b82f6",
+      largeIcon: "logo_large",
+      sound: "beep.wav",
     },
   },
 };

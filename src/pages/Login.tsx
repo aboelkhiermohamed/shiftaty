@@ -43,7 +43,7 @@ export default function Login() {
         setIsLoading(true);
         try {
             if (isSignUp) {
-                const { error } = await supabase.auth.signUp({
+                const { data, error } = await supabase.auth.signUp({
                     email,
                     password,
                     options: {
@@ -54,6 +54,17 @@ export default function Login() {
                     },
                 });
                 if (error) throw error;
+
+                // Ensure a profile is created immediately upon successful signup
+                if (data?.user) {
+                    await supabase.from('profiles').insert({
+                        id: data.user.id,
+                        name: name,
+                        title: professionalTitle,
+                        updated_at: new Date().toISOString()
+                    });
+                }
+
                 setShowSuccessDialog(true);
             } else {
                 const { error } = await supabase.auth.signInWithPassword({
@@ -79,6 +90,38 @@ export default function Login() {
                 });
                 navigate("/");
             }
+        } catch (error: any) {
+            toast({
+                title: "Error",
+                description: error.message,
+                variant: "destructive",
+            });
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    const handleForgotPassword = async () => {
+        if (!email) {
+            toast({
+                title: "Email Required",
+                description: "Please enter your email address to reset your password.",
+                variant: "destructive",
+            });
+            return;
+        }
+        setIsLoading(true);
+        try {
+            const { error } = await supabase.auth.resetPasswordForEmail(email, {
+                redirectTo: Capacitor.isNativePlatform()
+                    ? `shiftaty://auth/callback`
+                    : `${window.location.origin}${window.location.pathname}`
+            });
+            if (error) throw error;
+            toast({
+                title: "Check your email",
+                description: "We've sent you a password reset link.",
+            });
         } catch (error: any) {
             toast({
                 title: "Error",
@@ -152,7 +195,18 @@ export default function Login() {
                         />
                     </div>
                     <div className="space-y-2">
-                        <Label htmlFor="password">Password</Label>
+                        <div className="flex items-center justify-between">
+                            <Label htmlFor="password">Password</Label>
+                            {!isSignUp && (
+                                <button
+                                    type="button"
+                                    onClick={handleForgotPassword}
+                                    className="text-xs text-primary hover:underline hover:text-primary/80 transition-colors"
+                                >
+                                    Forgot password?
+                                </button>
+                            )}
+                        </div>
                         <Input
                             id="password"
                             type="password"

@@ -1,4 +1,4 @@
-export type PaymentModel = "fixed" | "per_patient" | "mixed" | "detailed";
+export type PaymentModel = "fixed" | "per_patient" | "mixed" | "detailed" | "government";
 
 export interface Hospital {
   id: string;
@@ -13,6 +13,7 @@ export interface Hospital {
     id: string;
     name: string;
     rate: number;
+    archived?: boolean;
   }[];
 
   color?: string;
@@ -34,6 +35,11 @@ export interface Shift {
 
   // New fields for "detailed" model
   itemCounts?: Record<string, number>; // Maps itemRate.id to count
+
+  // Snapshots of rates at the time the shift was created
+  storedFixedRate?: number;
+  storedPerPatientRate?: number;
+  storedFixedSalary?: number;
 
   totalEarnings: number;
   createdAt: Date;
@@ -59,3 +65,5 @@ export interface User {
   name: string;
   createdAt: Date;
 }
+
+export type NavIconStyle = "classic" | "medical" | "minimal";

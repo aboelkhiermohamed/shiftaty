@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Plus, Building2, MoreVertical, Pencil, Trash2 } from "lucide-react";
+import { Plus, Building2, MoreVertical, Pencil, Trash2, Loader2 } from "lucide-react";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { Button } from "@/components/ui/button";
@@ -26,6 +26,16 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { useAppStore } from "@/stores/appStore";
 import { PaymentModel } from "@/types";
 import { useToast } from "@/hooks/use-toast";
@@ -35,21 +45,29 @@ const paymentModelLabels: Record<PaymentModel, string> = {
   per_patient: "Per Patient/Case",
   mixed: "Mixed (Fixed + Per Patient)",
   detailed: "Detailed (Fixed + Items)",
+  government: "Government / Miri (حكومي / ميري)",
 };
 
 export default function Hospitals() {
   const [isOpen, setIsOpen] = useState(false);
+  const [hospitalToDelete, setHospitalToDelete] = useState<{ id: string, name: string } | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [name, setName] = useState("");
   const [paymentModel, setPaymentModel] = useState<PaymentModel>("fixed");
   const [fixedRate, setFixedRate] = useState("");
   const [perPatientRate, setPerPatientRate] = useState("");
+  const [isSaving, setIsSaving] = useState(false);
+
+  // Government model state
+  const [governmentSalary, setGovernmentSalary] = useState("");
+  const [nabatyaAllowance, setNabatyaAllowance] = useState("");
 
   // Detailed model state
   const [fixedSalary, setFixedSalary] = useState("");
-  const [itemRates, setItemRates] = useState<{ id: string; name: string; rate: number }[]>([]);
+  const [itemRates, setItemRates] = useState<{ id: string; name: string; rate: number; archived?: boolean }[]>([]);
   const [newItemName, setNewItemName] = useState("");
   const [newItemRate, setNewItemRate] = useState("");
+  const [editingItem, setEditingItem] = useState<{ id: string, name: string, rate: number } | null>(null);
 
   const hospitals = useAppStore((state) => state.hospitals);
   const addHospital = useAppStore((state) => state.addHospital);
@@ -59,7 +77,6 @@ export default function Hospitals() {
 
   const resetForm = () => {
     setName("");
-    setName("");
     setPaymentModel("fixed");
     setFixedRate("");
     setPerPatientRate("");
@@ -68,6 +85,8 @@ export default function Hospitals() {
     setNewItemName("");
     setNewItemRate("");
     setEditingId(null);
+    setGovernmentSalary("");
+    setNabatyaAllowance("");
   };
 
   const openEditDialog = (hospital: typeof hospitals[0]) => {
@@ -80,6 +99,10 @@ export default function Hospitals() {
     // Load detailed model data
     setFixedSalary(hospital.fixedSalary?.toString() || "");
     setItemRates(hospital.itemRates || []);
+
+    // Load government model data
+    setGovernmentSalary(hospital.fixedSalary?.toString() || "");
+    setNabatyaAllowance(hospital.fixedRate?.toString() || "");
 
     setIsOpen(true);
   };
@@ -98,11 +121,29 @@ export default function Hospitals() {
     setNewItemRate("");
   };
 
-  const handleDeleteItem = (id: string) => {
-    setItemRates(itemRates.filter((item) => item.id !== id));
+  const handleUpdateItem = () => {
+    if (!editingItem || !editingItem.name.trim() || !editingItem.rate) return;
+
+    // Archive the old item and create a new one to preserve history for old shifts
+    setItemRates(prev => prev.map(item =>
+      item.id === editingItem.id ? { ...item, archived: true } : item
+    ).concat([{
+      id: Math.random().toString(36).substring(2, 9),
+      name: editingItem.name.trim(),
+      rate: editingItem.rate,
+    }]));
+
+    setEditingItem(null);
   };
 
-  const handleSubmit = () => {
+  const handleDeleteItem = (id: string) => {
+    // Soft delete by marking as archived
+    setItemRates(prev => prev.map(item =>
+      item.id === id ? { ...item, archived: true } : item
+    ));
+  };
+
+  const handleSubmit = async () => {
     if (!name.trim()) {
       toast({
         title: "Error",
@@ -112,39 +153,50 @@ export default function Hospitals() {
       return;
     }
 
-    const hospitalData = {
-      name: name.trim(),
-      paymentModel,
-      fixedRate: parseFloat(fixedRate) || 0,
-      perPatientRate: parseFloat(perPatientRate) || 0,
-      fixedSalary: parseFloat(fixedSalary) || 0,
-      itemRates,
-    };
+    setIsSaving(true);
+    try {
+      const hospitalData = {
+        name: name.trim(),
+        paymentModel,
+        fixedRate: paymentModel === "government" ? parseFloat(nabatyaAllowance) || 0 : parseFloat(fixedRate) || 0,
+        perPatientRate: parseFloat(perPatientRate) || 0,
+        fixedSalary: paymentModel === "government" ? parseFloat(governmentSalary) || 0 : parseFloat(fixedSalary) || 0,
+        itemRates,
+      };
 
-    if (editingId) {
-      updateHospital(editingId, hospitalData);
-      toast({
-        title: "Hospital Updated",
-        description: `${name} has been updated successfully`,
-      });
-    } else {
-      addHospital(hospitalData);
-      toast({
-        title: "Hospital Added",
-        description: `${name} has been added successfully`,
-      });
+      if (editingId) {
+        await updateHospital(editingId, hospitalData);
+        toast({
+          title: "Hospital Updated",
+          description: `${name} has been updated successfully`,
+        });
+      } else {
+        await addHospital(hospitalData);
+        toast({
+          title: "Hospital Added",
+          description: `${name} has been added successfully`,
+        });
+      }
+
+      resetForm();
+      setIsOpen(false);
+    } finally {
+      setIsSaving(false);
     }
-
-    resetForm();
-    setIsOpen(false);
   };
 
-  const handleDelete = (id: string, hospitalName: string) => {
-    deleteHospital(id);
-    toast({
-      title: "Hospital Deleted",
-      description: `${hospitalName} has been removed`,
-    });
+  const confirmDelete = async () => {
+    if (!hospitalToDelete) return;
+    try {
+      await deleteHospital(hospitalToDelete.id);
+      toast({
+        title: "Hospital Deleted",
+        description: `${hospitalToDelete.name} has been removed`,
+      });
+    } catch (e) {
+      console.error(e);
+      alert("Failed to delete hospital online. Try again later.");
+    }
   };
 
   return (
@@ -161,7 +213,13 @@ export default function Hospitals() {
             animate={{ opacity: 1, y: 0 }}
             className="bg-card rounded-xl p-8 text-center border border-border"
           >
-            <Building2 className="h-12 w-12 mx-auto text-muted-foreground mb-3" />
+            <motion.div
+              animate={{ y: [0, -6, 0] }}
+              transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
+              style={{ willChange: "transform" }}
+            >
+              <Building2 className="h-12 w-12 mx-auto text-muted-foreground mb-3" />
+            </motion.div>
             <p className="text-foreground font-medium">No hospitals yet</p>
             <p className="text-sm text-muted-foreground mt-1">
               Add your first hospital to start logging shifts
@@ -176,7 +234,7 @@ export default function Hospitals() {
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, x: -100 }}
-                  transition={{ delay: index * 0.05 }}
+                  transition={{ delay: index * 0.025, duration: 0.2 }}
                   className="bg-card rounded-xl p-4 shadow-sm border border-border"
                 >
                   <div className="flex items-start justify-between">
@@ -205,11 +263,24 @@ export default function Hospitals() {
                                   Base: {hospital.fixedSalary}
                                 </span>
                               )}
-                              {hospital.itemRates?.map((item) => (
+                              {hospital.itemRates?.filter(item => !item.archived).map((item) => (
                                 <span key={item.id} className="text-foreground bg-secondary/50 px-2 py-0.5 rounded text-xs">
                                   {item.name}: {item.rate}
                                 </span>
                               ))}
+                            </>
+                          ) : hospital.paymentModel === "government" ? (
+                            <>
+                              {hospital.fixedSalary && hospital.fixedSalary > 0 && (
+                                <span className="text-foreground bg-secondary/50 px-2 py-0.5 rounded text-xs">
+                                  Monthly Salary (المرتب الحكومي): {hospital.fixedSalary} EGP
+                                </span>
+                              )}
+                              {hospital.fixedRate && hospital.fixedRate > 0 && (
+                                <span className="text-foreground bg-secondary/50 px-2 py-0.5 rounded text-xs">
+                                  Nabatya Allowance (بدل النوبتجية): {hospital.fixedRate} EGP
+                                </span>
+                              )}
                             </>
                           ) : (
                             <>
@@ -243,7 +314,7 @@ export default function Hospitals() {
                           Edit
                         </DropdownMenuItem>
                         <DropdownMenuItem
-                          onClick={() => handleDelete(hospital.id, hospital.name)}
+                          onClick={() => setHospitalToDelete({ id: hospital.id, name: hospital.name })}
                           className="text-destructive"
                         >
                           <Trash2 className="h-4 w-4 mr-2" />
@@ -311,6 +382,7 @@ export default function Hospitals() {
                   <SelectItem value="per_patient">Per Patient/Case</SelectItem>
                   <SelectItem value="mixed">Mixed (Fixed + Per Patient)</SelectItem>
                   <SelectItem value="detailed">Detailed (Fixed + Items)</SelectItem>
+                  <SelectItem value="government">Government / Miri (حكومي / ميري)</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -343,6 +415,33 @@ export default function Hospitals() {
               </div>
             )}
 
+            {paymentModel === "government" && (
+              <div className="space-y-4 animate-in fade-in duration-200">
+                <div>
+                  <Label htmlFor="governmentSalary">Fixed Monthly Salary (المرتب الحكومي الثابت)</Label>
+                  <Input
+                    id="governmentSalary"
+                    type="number"
+                    value={governmentSalary}
+                    onChange={(e) => setGovernmentSalary(e.target.value)}
+                    placeholder="e.g., 5000"
+                    className="mt-1.5"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="nabatyaAllowance">Nabatya Shift Allowance (بدل النوبتجية)</Label>
+                  <Input
+                    id="nabatyaAllowance"
+                    type="number"
+                    value={nabatyaAllowance}
+                    onChange={(e) => setNabatyaAllowance(e.target.value)}
+                    placeholder="e.g., 300"
+                    className="mt-1.5"
+                  />
+                </div>
+              </div>
+            )}
+
             {paymentModel === "detailed" && (
               <div className="space-y-4">
                 <div>
@@ -360,18 +459,28 @@ export default function Hospitals() {
                 <div className="space-y-3">
                   <Label>Billable Items</Label>
                   <div className="space-y-2">
-                    {itemRates.map((item) => (
+                    {itemRates.filter(i => !i.archived).map((item) => (
                       <div key={item.id} className="flex items-center gap-2 bg-secondary/30 p-2 rounded-lg">
                         <span className="flex-1 text-sm font-medium">{item.name}</span>
                         <span className="text-sm text-muted-foreground">{item.rate} EGP</span>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-6 w-6 text-destructive hover:text-destructive"
-                          onClick={() => handleDeleteItem(item.id)}
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
+                        <div className="flex items-center gap-1">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8 text-muted-foreground hover:text-primary"
+                            onClick={() => setEditingItem({ id: item.id, name: item.name, rate: item.rate })}
+                          >
+                            <Pencil className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8 text-destructive hover:text-destructive"
+                            onClick={() => handleDeleteItem(item.id)}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
                       </div>
                     ))}
                   </div>
@@ -398,12 +507,72 @@ export default function Hospitals() {
               </div>
             )}
 
-            <Button onClick={handleSubmit} className="w-full">
+            <Button onClick={handleSubmit} disabled={isSaving} className="w-full">
+              {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               {editingId ? "Update Hospital" : "Add Hospital"}
             </Button>
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Edit Item Rate Dialog */}
+      <Dialog open={!!editingItem} onOpenChange={(open) => !open && setEditingItem(null)}>
+        <DialogContent className="sm:max-w-xs">
+          <DialogHeader>
+            <DialogTitle>Edit Item Rate</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div>
+              <Label htmlFor="editItemName">Item Name</Label>
+              <Input
+                id="editItemName"
+                value={editingItem?.name || ""}
+                onChange={(e) => setEditingItem(prev => prev ? { ...prev, name: e.target.value } : null)}
+                className="mt-1"
+              />
+            </div>
+            <div>
+              <Label htmlFor="editItemRate">Rate (EGP)</Label>
+              <Input
+                id="editItemRate"
+                type="number"
+                value={editingItem?.rate || ""}
+                onChange={(e) => setEditingItem(prev => prev ? { ...prev, rate: parseFloat(e.target.value) || 0 } : null)}
+                className="mt-1"
+              />
+            </div>
+            <div className="flex gap-2 pt-2">
+              <Button variant="outline" onClick={() => setEditingItem(null)} className="flex-1">
+                Cancel
+              </Button>
+              <Button onClick={handleUpdateItem} className="flex-1">
+                Update
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Confirmation Alert */}
+      <AlertDialog open={!!hospitalToDelete} onOpenChange={(open) => !open && setHospitalToDelete(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete {hospitalToDelete?.name}?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to permanently delete this hospital? This will not automatically delete associated shifts, but you will no longer be able to use this hospital's rates.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={confirmDelete}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Delete Hospital
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </AppLayout >
   );
 }

@@ -22,3 +22,10 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Temporary files & backups
+build_error.txt
+diagnostics-report.txt
+diff.txt
+*.backup
+*.timestamp-*.mjs

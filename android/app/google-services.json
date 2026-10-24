@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "383589575532",
+    "project_id": "shiftaty-75fcf",
+    "storage_bucket": "shiftaty-75fcf.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:383589575532:android:58a33ed27d7f0e137a2149",
+        "android_client_info": {
+          "package_name": "app.lovable.bbce7db744bc427ead7ef82349d2a426"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyA9gjehz3tTJe-JEm9JnR4SAo3c3mrhIzQ"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

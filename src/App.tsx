@@ -17,6 +17,8 @@ import Login from "./pages/Login";
 import NotFound from "./pages/NotFound";
 import { Loader2 } from "lucide-react";
 import { App as CapacitorApp } from "@capacitor/app"; // Import Capacitor App
+import { LocalNotifications } from "@capacitor/local-notifications";
+import { useAppStore } from "@/stores/appStore";
 
 const queryClient = new QueryClient();
 
@@ -28,6 +30,8 @@ console.log("Current Search:", window.location.search);
 
 // Deep Link Handler Component
 const DeepLinkListener = () => {
+  const navigate = useNavigate();
+
   useEffect(() => {
     const listener = CapacitorApp.addListener('appUrlOpen', (event) => {
       try {
@@ -55,34 +59,116 @@ const DeepLinkListener = () => {
     };
   }, []);
 
+  useEffect(() => {
+    const notifListener = LocalNotifications.addListener(
+      'localNotificationActionPerformed',
+      (action) => {
+        try {
+          const shiftId = action.notification.extra?.shiftId;
+          if (shiftId) {
+            navigate(`/edit-shift/${shiftId}`);
+          }
+        } catch (e) {
+          console.error('Error handling notification action:', e);
+        }
+      }
+    );
+
+    return () => {
+      notifListener.then(handle => handle.remove());
+    };
+  }, [navigate]);
+
   return null;
 };
 
+import { SplashScreen } from "@capacitor/splash-screen";
+
+import { DashboardSkeleton } from "@/components/dashboard/DashboardSkeleton";
+
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   const [session, setSession] = useState<any>(null);
-  const [loading, setLoading] = useState(true);
+  const [isAuthChecked, setIsAuthChecked] = useState(false);
+  const [isReady, setIsReady] = useState(() => {
+    try {
+      const keys = Object.keys(localStorage);
+      const hasAuthToken = keys.some(k => k.startsWith('sb-') && k.endsWith('-auth-token'));
+      const isGuest = localStorage.getItem("isGuest") === "true";
+      return hasAuthToken || isGuest;
+    } catch {
+      return false;
+    }
+  });
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-      setLoading(false);
-    });
+    const initApp = async () => {
+      if (isReady) {
+        // Immediate hide if we have a hint
+        SplashScreen.hide().catch(() => { });
+      }
+
+      const { data: { session: initialSession } } = await supabase.auth.getSession();
+      setSession(initialSession);
+      setIsAuthChecked(true);
+      setIsReady(true);
+
+      // Safety hide for all users
+      setTimeout(() => {
+        SplashScreen.hide().catch(() => { });
+      }, 50);
+
+      // Wait for hydration
+      await new Promise(resolve => {
+        if (useAppStore.getState().isHydrated) {
+          resolve(true);
+        } else {
+          const unsub = useAppStore.subscribe(state => {
+            if (state.isHydrated) {
+              unsub();
+              resolve(true);
+            }
+          });
+        }
+      });
+
+      if (initialSession) {
+        const store = useAppStore.getState();
+        store.initPushNotifications();
+
+        // 1. Sync any local changes first (Push)
+        await store.syncData();
+        // 2. Then fetch latest data from cloud (Pull)
+        await store.fetchData();
+      }
+    };
+
+    initApp();
 
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((_event, session) => {
       setSession(session);
+      setIsAuthChecked(true);
     });
 
-    return () => subscription.unsubscribe();
+    const appStateListener = CapacitorApp.addListener('appStateChange', async ({ isActive }) => {
+      if (isActive) {
+        const store = useAppStore.getState();
+        if (store.hasUnsyncedChanges && !store.isSyncing) {
+          await store.syncData();
+        }
+        await store.fetchData();
+      }
+    });
+
+    return () => {
+      subscription.unsubscribe();
+      appStateListener.then(handle => handle.remove());
+    };
   }, []);
 
-  if (loading) {
-    return (
-      <div className="flex h-screen w-full items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
-      </div>
-    );
+  if (!isReady || !isAuthChecked) {
+    return <DashboardSkeleton />;
   }
 
   if (!session) {

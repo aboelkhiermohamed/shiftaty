@@ -1,14 +1,18 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
-import { Hospital, Shift, PaymentModel } from "@/types";
+import { Hospital, Shift, PaymentModel, NavIconStyle } from "@/types";
 import { supabase } from "@/lib/supabase";
 import { LocalNotifications } from "@capacitor/local-notifications";
+import { PushNotifications } from "@capacitor/push-notifications";
 
 export interface UserProfile {
   name: string;
   title: string;
   email: string;
   gender: string;
+  fcmToken?: string;
+  avatar?: string;
+  updatedAt?: string;
 }
 
 interface AppState {
@@ -16,33 +20,52 @@ interface AppState {
   hospitals: Hospital[];
   shifts: Shift[];
   notificationsEnabled: boolean;
+  reminderInterval: number;
+  isPushInitialized: boolean;
+  isSyncing: boolean;
+  hasUnsyncedChanges: boolean;
+  chartType: "pie" | "bar" | "list" | "donut";
+  navIconStyle: NavIconStyle;
+  isPrivacyMode: boolean;
+  isHydrated: boolean;
 
   // Profile actions
   updateUserProfile: (profile: Partial<UserProfile>) => void;
   setNotificationsEnabled: (enabled: boolean) => Promise<boolean>;
+  setReminderInterval: (hours: number) => void;
+  initPushNotifications: () => Promise<void>;
 
   // Hospital actions
-  addHospital: (hospital: Omit<Hospital, "id" | "createdAt" | "updatedAt">) => void;
-  updateHospital: (id: string, updates: Partial<Hospital>) => void;
-  deleteHospital: (id: string) => void;
+  addHospital: (hospital: Omit<Hospital, "id" | "createdAt" | "updatedAt">) => Promise<void>;
+  updateHospital: (id: string, updates: Partial<Hospital>) => Promise<void>;
+  deleteHospital: (id: string) => Promise<void>;
 
   // Shift actions
-  addShift: (shift: Omit<Shift, "id" | "createdAt" | "updatedAt" | "totalEarnings">) => void;
-  updateShift: (id: string, updates: Partial<Shift>) => void;
-  deleteShift: (id: string) => void;
+  addShift: (shift: Omit<Shift, "id" | "createdAt" | "updatedAt" | "totalEarnings">) => Promise<void>;
+  updateShift: (id: string, updates: Partial<Shift>) => Promise<void>;
+  deleteShift: (id: string) => Promise<void>;
 
   // Calculation helpers
   calculateShiftEarnings: (
     hospitalId: string,
     casesCount: number,
     customRate?: number,
-    itemCounts?: Record<string, number>
+    itemCounts?: Record<string, number>,
+    storedFixedRate?: number,
+    storedPerPatientRate?: number,
+    storedFixedSalary?: number,
+    multiplier?: number,
+    multiplierType?: "total" | "base",
+    isNabatya?: boolean
   ) => number;
 
   // Data management
   importData: (data: AppState) => void;
   syncData: () => Promise<void>;
   fetchData: () => Promise<void>;
+  setChartType: (type: "pie" | "bar" | "list" | "donut") => void;
+  setNavIconStyle: (style: NavIconStyle) => void;
+  setPrivacyMode: (enabled: boolean) => void;
 }
 
 const HOSPITAL_COLORS = [
@@ -100,19 +123,43 @@ export const useAppStore = create<AppState>()(
       hospitals: [],
       shifts: [],
       notificationsEnabled: false,
+      reminderInterval: 3,
+      isPushInitialized: false,
+      isSyncing: false,
+      hasUnsyncedChanges: false,
+      chartType: "donut",
+      navIconStyle: "modern",
+      isPrivacyMode: false,
+      isHydrated: false,
+
+      setChartType: (type) => set({ chartType: type }),
+      setNavIconStyle: (style) => set({ navIconStyle: style }),
+      setPrivacyMode: (enabled) => set({ isPrivacyMode: enabled }),
+      setReminderInterval: (hours) => set({ reminderInterval: hours }),
 
       updateUserProfile: async (profile) => {
+        const now = new Date().toISOString();
         set((state) => ({
-          userProfile: { ...state.userProfile, ...profile },
+          userProfile: { ...state.userProfile, ...profile, updatedAt: now },
+          hasUnsyncedChanges: true,
         }));
 
         const { data: { session } } = await supabase.auth.getSession();
         if (session?.user) {
-          await supabase.from('profiles').upsert({
+          const stateProfile = get().userProfile;
+          const { error } = await supabase.from('profiles').upsert({
             id: session.user.id,
-            ...get().userProfile,
-            updated_at: new Date().toISOString()
+            name: stateProfile.name,
+            title: stateProfile.title,
+            email: stateProfile.email,
+            gender: stateProfile.gender,
+            fcm_token: stateProfile.fcmToken,
+            updated_at: now
           });
+          
+          if (!error) {
+            set({ hasUnsyncedChanges: false });
+          }
         }
       },
 
@@ -126,10 +173,97 @@ export const useAppStore = create<AppState>()(
           return false;
         } else {
           set({ notificationsEnabled: false });
-          // Optionally cancel all notifications?
-          // LocalNotifications.cancel(get().shifts.map(s => ({ id: getNotificationId(s.id) })));
+          try {
+            const notificationsToCancel: { id: number }[] = [];
+            get().shifts.forEach((s) => {
+              notificationsToCancel.push(
+                { id: getNotificationId(s.id + '_start') },
+                { id: getNotificationId(s.id + '_end') },
+                { id: getNotificationId(s.id + '_checkout') },
+                { id: getNotificationId(s.id) }
+              );
+              for (let i = 1; i <= 24; i++) {
+                notificationsToCancel.push({ id: getNotificationId(s.id + `_mid_${i}`) });
+              }
+            });
+            if (notificationsToCancel.length > 0) {
+              await LocalNotifications.cancel({
+                notifications: notificationsToCancel
+              });
+            }
+          } catch (e) {
+            console.error("Failed to cancel notifications on disable:", e);
+          }
           return true;
         }
+      },
+
+      initPushNotifications: async () => {
+        const state = get();
+        if (state.isPushInitialized) return;
+        set({ isPushInitialized: true });
+
+        let permStatus = await PushNotifications.checkPermissions();
+
+        if (permStatus.receive === 'prompt') {
+          permStatus = await PushNotifications.requestPermissions();
+        }
+
+        if (permStatus.receive !== 'granted') {
+          console.warn('User denied push notification permissions');
+          return;
+        }
+
+        try {
+          await PushNotifications.register();
+        } catch (e: any) {
+          console.error('Failed to register PushNotifications: ' + e.message);
+        }
+
+        PushNotifications.addListener('registration', async (token) => {
+          console.log('Push registration success, token: ' + token.value);
+          const currentToken = get().userProfile.fcmToken;
+
+          if (currentToken !== token.value) {
+            set((state) => ({
+              userProfile: { ...state.userProfile, fcmToken: token.value }
+            }));
+
+            // Force a slight delay to ensure Supabase has loaded the session on fresh app opens
+            setTimeout(async () => {
+              const { data: { session } } = await supabase.auth.getSession();
+              if (session?.user) {
+                const stateProfile = get().userProfile;
+                const { error } = await supabase.from('profiles').upsert({
+                  id: session.user.id,
+                  name: stateProfile.name,
+                  title: stateProfile.title,
+                  fcm_token: token.value,
+                  updated_at: new Date().toISOString()
+                });
+
+                if (!error) {
+                  console.log("Uploaded FCM Token to Supabase");
+                }
+              } else {
+                console.log("No session found during push registration. Token saved locally.");
+              }
+            }, 2000);
+          }
+        });
+
+        PushNotifications.addListener('registrationError', (error: any) => {
+          console.error('Error on push registration: ' + JSON.stringify(error));
+        });
+
+        PushNotifications.addListener('pushNotificationReceived', (notification) => {
+          console.log('Push received: ' + JSON.stringify(notification));
+          // Could dispatch a local toast here if desired
+        });
+
+        PushNotifications.addListener('pushNotificationActionPerformed', (notification) => {
+          console.log('Push action performed: ' + JSON.stringify(notification));
+        });
       },
 
       addHospital: async (hospitalData) => {
@@ -142,13 +276,27 @@ export const useAppStore = create<AppState>()(
         };
         set((state) => ({
           hospitals: [...state.hospitals, newHospital],
+          hasUnsyncedChanges: true,
         }));
 
         const { data: { session } } = await supabase.auth.getSession();
         if (session?.user) {
-          await supabase.from('hospitals').insert({
-            ...newHospital,
-            user_id: session.user.id
+          // Fire and forget networking
+          supabase.from('hospitals').insert({
+            id: newHospital.id,
+            user_id: session.user.id,
+            name: newHospital.name,
+            payment_model: newHospital.paymentModel,
+            fixed_rate: newHospital.fixedRate,
+            per_patient_rate: newHospital.perPatientRate,
+            fixed_salary: newHospital.fixedSalary,
+            item_rates: newHospital.itemRates,
+            color: newHospital.color,
+            created_at: newHospital.createdAt instanceof Date ? newHospital.createdAt.toISOString() : newHospital.createdAt,
+            updated_at: newHospital.updatedAt instanceof Date ? newHospital.updatedAt.toISOString() : newHospital.updatedAt,
+          }).then(({ error }) => {
+            if (error) console.error("Background insert hospital failed:", error);
+            else set({ hasUnsyncedChanges: false });
           });
         }
       },
@@ -158,16 +306,27 @@ export const useAppStore = create<AppState>()(
           hospitals: state.hospitals.map((h) =>
             h.id === id ? { ...h, ...updates, updatedAt: new Date() } : h
           ),
+          hasUnsyncedChanges: true,
         }));
 
         const { data: { session } } = await supabase.auth.getSession();
         if (session?.user) {
           const updatedHospital = get().hospitals.find(h => h.id === id);
           if (updatedHospital) {
-            await supabase.from('hospitals').update({
-              ...updatedHospital,
-              updatedAt: new Date().toISOString()
-            }).eq('id', id);
+            // Fire and forget
+            supabase.from('hospitals').update({
+              name: updatedHospital.name,
+              payment_model: updatedHospital.paymentModel,
+              fixed_rate: updatedHospital.fixedRate,
+              per_patient_rate: updatedHospital.perPatientRate,
+              fixed_salary: updatedHospital.fixedSalary,
+              item_rates: updatedHospital.itemRates,
+              color: updatedHospital.color,
+              updated_at: new Date().toISOString()
+            }).eq('id', id).then(({ error }) => {
+              if (error) console.error("Background update hospital failed:", error);
+              else set({ hasUnsyncedChanges: false });
+            });
           }
         }
       },
@@ -175,32 +334,76 @@ export const useAppStore = create<AppState>()(
       deleteHospital: async (id) => {
         set((state) => ({
           hospitals: state.hospitals.filter((h) => h.id !== id),
-          shifts: state.shifts.filter((s) => s.hospitalId !== id),
+          hasUnsyncedChanges: true,
         }));
 
         const { data: { session } } = await supabase.auth.getSession();
         if (session?.user) {
-          await supabase.from('hospitals').delete().eq('id', id);
+          // Fire and forget to not block UI
+          supabase.from('hospitals').delete().eq('id', id).then(({ error }) => {
+            if (error) console.error('Failed to delete hospital from cloud:', error);
+            else set({ hasUnsyncedChanges: false });
+          });
         }
       },
 
       addShift: async (shiftData) => {
+        const hospital = get().hospitals.find(h => h.id === shiftData.hospitalId);
+        
+        let mult = 1;
+        let multType: 'total' | 'base' = 'total';
+        if (shiftData.notes) {
+          const match = shiftData.notes.match(/\[Multiplier:\s*([0-9.]+)\s*x\s*\((Total|Base)\)\]/i);
+          if (match) {
+            mult = parseFloat(match[1]);
+            multType = match[2].toLowerCase() as 'total' | 'base';
+          }
+        }
+
+        const fRate = shiftData.storedFixedRate !== undefined ? shiftData.storedFixedRate : hospital?.fixedRate;
+        const pRate = shiftData.storedPerPatientRate !== undefined ? shiftData.storedPerPatientRate : hospital?.perPatientRate;
+        const fSalary = shiftData.storedFixedSalary !== undefined ? shiftData.storedFixedSalary : hospital?.fixedSalary;
+
+        const isNabatya = shiftData.notes?.includes("[Nabatya: true]") || false;
         const totalEarnings = get().calculateShiftEarnings(
           shiftData.hospitalId,
           shiftData.casesCount,
           shiftData.customRate,
-          shiftData.itemCounts
+          shiftData.itemCounts,
+          fRate,
+          pRate,
+          fSalary,
+          mult,
+          multType,
+          isNabatya
         );
+
+        // Snapshot hospital name/color/salary tags
+        let finalNotes = shiftData.notes || "";
+        if (hospital) {
+          finalNotes = finalNotes.replace(/\s*\[HospitalName:\s*[^\]]+\s*\]/gi, "").trim();
+          finalNotes = finalNotes.replace(/\s*\[HospitalColor:\s*[^\]]+\s*\]/gi, "").trim();
+          finalNotes = finalNotes.replace(/\s*\[StoredFixedSalary:\s*[^\]]+\s*\]/gi, "").trim();
+          finalNotes = finalNotes.replace(/\s*\[StoredFixedRate:\s*[^\]]+\s*\]/gi, "").trim();
+          finalNotes = finalNotes.replace(/\s*\[StoredPaymentModel:\s*[^\]]+\s*\]/gi, "").trim();
+          const tag = `[HospitalName: ${hospital.name}] [HospitalColor: ${hospital.color}] [StoredFixedSalary: ${hospital.fixedSalary || 0}] [StoredFixedRate: ${hospital.fixedRate || 0}] [StoredPaymentModel: ${hospital.paymentModel}]`;
+          finalNotes = finalNotes ? `${finalNotes}\n${tag}` : tag;
+        }
 
         const newShift: Shift = {
           ...shiftData,
           id: generateId(),
           totalEarnings,
+          storedFixedRate: fRate,
+          storedPerPatientRate: pRate,
+          storedFixedSalary: fSalary,
+          notes: finalNotes || undefined,
           createdAt: new Date(),
           updatedAt: new Date(),
         };
         set((state) => ({
           shifts: [...state.shifts, newShift],
+          hasUnsyncedChanges: true,
         }));
 
         // Schedule Notifications
@@ -215,8 +418,8 @@ export const useAppStore = create<AppState>()(
 
           const endDate = new Date(shiftDate);
           endDate.setHours(endHours, endMinutes, 0, 0);
-          // Handle overnight shifts
-          if (endDate < startDate) {
+          // Handle overnight or 24-hour shifts
+          if (endDate <= startDate) {
             endDate.setDate(endDate.getDate() + 1);
           }
 
@@ -227,8 +430,11 @@ export const useAppStore = create<AppState>()(
               notifications: [{
                 title: "Upcoming Shift 🏥",
                 body: `Your shift at ${hospital?.name || 'Hospital'} starts in 1 hour.`,
+                smallIcon: "logo_large",
+                largeIcon: "logo_large",
                 id: getNotificationId(newShift.id + '_start'),
                 schedule: { at: startScheduleTime },
+                extra: { shiftId: newShift.id }
               }]
             });
           }
@@ -240,18 +446,79 @@ export const useAppStore = create<AppState>()(
               notifications: [{
                 title: "Almost Done! 🎉",
                 body: `${getRandomEncouragement()} You've earned ${totalEarnings.toLocaleString()} EGP at ${hospital?.name || 'Hospital'}.`,
+                smallIcon: "logo_large",
+                largeIcon: "logo_large",
                 id: getNotificationId(newShift.id + '_end'),
                 schedule: { at: endScheduleTime },
+                extra: { shiftId: newShift.id }
               }]
             });
+          }
+
+          // 3. Smart Checkout Reminder (10 mins after shift end)
+          const checkoutScheduleTime = new Date(endDate.getTime() + 10 * 60 * 1000);
+          if (checkoutScheduleTime > new Date()) {
+            LocalNotifications.schedule({
+              notifications: [{
+                title: "انتهت النباطشية! 🏥",
+                body: `لا تنسَ مراجعة وتسجيل عدد الحالات والعمليات اليوم في ${hospital?.name || 'المستشفى'}.`,
+                smallIcon: "logo_large",
+                largeIcon: "logo_large",
+                id: getNotificationId(newShift.id + '_checkout'),
+                schedule: { at: checkoutScheduleTime },
+                extra: { shiftId: newShift.id }
+              }]
+            });
+          }
+
+          // 4. Periodic Mid-Shift Reminders (Every X hours during the shift)
+          const intervalMs = get().reminderInterval * 60 * 60 * 1000;
+          let reminderTime = new Date(startDate.getTime() + intervalMs);
+          let midIndex = 1;
+          while (reminderTime < new Date(endDate.getTime() - 30 * 60 * 1000)) {
+            if (reminderTime > new Date()) {
+              LocalNotifications.schedule({
+                notifications: [{
+                  title: "سجل حالاتك أولاً بأول! 🏥",
+                  body: `لا تنسَ تحديث وتسجيل الحالات والعمليات التي أنجزتها حتى الآن في ${hospital?.name || 'المستشفى'}.`,
+                  smallIcon: "logo_large",
+                  largeIcon: "logo_large",
+                  id: getNotificationId(newShift.id + `_mid_${midIndex}`),
+                  schedule: { at: reminderTime },
+                  extra: { shiftId: newShift.id }
+                }]
+              });
+            }
+            reminderTime = new Date(reminderTime.getTime() + intervalMs);
+            midIndex++;
           }
         }
 
         const { data: { session } } = await supabase.auth.getSession();
         if (session?.user) {
-          await supabase.from('shifts').insert({
-            ...newShift,
-            user_id: session.user.id
+          // Fire and forget
+          supabase.from('shifts').insert({
+            id: newShift.id,
+            user_id: session.user.id,
+            hospital_id: newShift.hospitalId,
+            date: newShift.date instanceof Date ? newShift.date.toISOString() : newShift.date,
+            start_time: newShift.startTime,
+            end_time: newShift.endTime,
+            cases_count: newShift.casesCount,
+            procedures_count: newShift.proceduresCount,
+            includes_outpatient: newShift.includesOutpatient,
+            notes: newShift.notes ?? null,
+            custom_rate: newShift.customRate ?? null,
+            item_counts: newShift.itemCounts ?? null,
+            stored_fixed_rate: newShift.storedFixedRate ?? null,
+            stored_per_patient_rate: newShift.storedPerPatientRate ?? null,
+            stored_fixed_salary: newShift.storedFixedSalary ?? null,
+            total_earnings: newShift.totalEarnings,
+            created_at: newShift.createdAt instanceof Date ? newShift.createdAt.toISOString() : newShift.createdAt,
+            updated_at: newShift.updatedAt instanceof Date ? newShift.updatedAt.toISOString() : newShift.updatedAt,
+          }).then(({ error }) => {
+            if (error) console.error("Background shift insert failed:", error);
+            else set({ hasUnsyncedChanges: false });
           });
         }
       },
@@ -261,33 +528,104 @@ export const useAppStore = create<AppState>()(
           shifts: state.shifts.map((s) => {
             if (s.id !== id) return s;
 
-            let updatedShift = { ...s, ...updates, updatedAt: new Date() };
+            // Snapshot hospital name/color/salary tags
+            const finalHospId = updates.hospitalId || s.hospitalId;
+            const hospital = get().hospitals.find(h => h.id === finalHospId);
+            let finalNotes = (updates.notes !== undefined ? updates.notes : s.notes) || "";
+            if (hospital) {
+              finalNotes = finalNotes.replace(/\s*\[HospitalName:\s*[^\]]+\s*\]/gi, "").trim();
+              finalNotes = finalNotes.replace(/\s*\[HospitalColor:\s*[^\]]+\s*\]/gi, "").trim();
+              finalNotes = finalNotes.replace(/\s*\[StoredFixedSalary:\s*[^\]]+\s*\]/gi, "").trim();
+              finalNotes = finalNotes.replace(/\s*\[StoredFixedRate:\s*[^\]]+\s*\]/gi, "").trim();
+              finalNotes = finalNotes.replace(/\s*\[StoredPaymentModel:\s*[^\]]+\s*\]/gi, "").trim();
+              const tag = `[HospitalName: ${hospital.name}] [HospitalColor: ${hospital.color}] [StoredFixedSalary: ${hospital.fixedSalary || 0}] [StoredFixedRate: ${hospital.fixedRate || 0}] [StoredPaymentModel: ${hospital.paymentModel}]`;
+              finalNotes = finalNotes ? `${finalNotes}\n${tag}` : tag;
+            }
+
+            // Clean undefined values from updates to prevent overwriting existing fields
+            const cleanedUpdates = { ...updates };
+            if (cleanedUpdates.storedFixedRate === undefined) delete cleanedUpdates.storedFixedRate;
+            if (cleanedUpdates.storedPerPatientRate === undefined) delete cleanedUpdates.storedPerPatientRate;
+            if (cleanedUpdates.storedFixedSalary === undefined) delete cleanedUpdates.storedFixedSalary;
+
+            let updatedShift = { ...s, ...cleanedUpdates, notes: finalNotes || undefined, updatedAt: new Date() };
 
             // Recalculate earnings if relevant fields changed
-            if (updates.hospitalId || updates.casesCount !== undefined || updates.customRate !== undefined || updates.itemCounts !== undefined) {
+            if (
+              updates.hospitalId ||
+              updates.casesCount !== undefined ||
+              updates.customRate !== undefined ||
+              updates.itemCounts !== undefined ||
+              updates.notes !== undefined ||
+              updates.storedFixedRate !== undefined ||
+              updates.storedFixedSalary !== undefined
+            ) {
+              // If hospital changed, we update the stored rates to the new hospital's defaults
+              let fRate = updatedShift.storedFixedRate;
+              let pRate = updatedShift.storedPerPatientRate;
+              let fSalary = updatedShift.storedFixedSalary;
+
+              if (updates.hospitalId && updates.hospitalId !== s.hospitalId) {
+                const newHospital = get().hospitals.find(h => h.id === updates.hospitalId);
+                fRate = newHospital?.fixedRate;
+                pRate = newHospital?.perPatientRate;
+                fSalary = newHospital?.fixedSalary;
+
+                updatedShift.storedFixedRate = fRate;
+                updatedShift.storedPerPatientRate = pRate;
+                updatedShift.storedFixedSalary = fSalary;
+              }
+
+              let mult = 1;
+              let multType: 'total' | 'base' = 'total';
+              if (updatedShift.notes) {
+                const match = updatedShift.notes.match(/\[Multiplier:\s*([0-9.]+)\s*x\s*\((Total|Base)\)\]/i);
+                if (match) {
+                  mult = parseFloat(match[1]);
+                  multType = match[2].toLowerCase() as 'total' | 'base';
+                }
+              }
+
+              const isNabatya = updatedShift.notes?.includes("[Nabatya: true]") || false;
               updatedShift.totalEarnings = get().calculateShiftEarnings(
                 updatedShift.hospitalId,
                 updatedShift.casesCount,
                 updatedShift.customRate,
-                updatedShift.itemCounts
+                updatedShift.itemCounts,
+                fRate,
+                pRate,
+                fSalary,
+                mult,
+                multType,
+                isNabatya
               );
             }
 
             return updatedShift;
           }),
+          hasUnsyncedChanges: true,
         }));
 
-        // Update Notifications
-        if (get().notificationsEnabled) {
-          // Cancel old
-          LocalNotifications.cancel({
-            notifications: [
-              { id: getNotificationId(id + '_start') },
-              { id: getNotificationId(id + '_end') },
-              { id: getNotificationId(id) } // Legacy support for old IDs
-            ]
+        // Always cancel old notifications for this shift
+        try {
+          const notificationsToCancel = [
+            { id: getNotificationId(id + '_start') },
+            { id: getNotificationId(id + '_end') },
+            { id: getNotificationId(id + '_checkout') },
+            { id: getNotificationId(id) } // Legacy support for old IDs
+          ];
+          for (let i = 1; i <= 24; i++) {
+            notificationsToCancel.push({ id: getNotificationId(id + `_mid_${i}`) });
+          }
+          await LocalNotifications.cancel({
+            notifications: notificationsToCancel
           });
+        } catch (e) {
+          console.error("Failed to cancel notifications on update:", e);
+        }
 
+        // Schedule new notifications if enabled
+        if (get().notificationsEnabled) {
           const updatedShift = get().shifts.find(s => s.id === id);
           if (updatedShift) {
             const hospital = get().hospitals.find(h => h.id === updatedShift.hospitalId);
@@ -300,7 +638,8 @@ export const useAppStore = create<AppState>()(
 
             const endDate = new Date(shiftDate);
             endDate.setHours(endHours, endMinutes, 0, 0);
-            if (endDate < startDate) {
+            // Handle overnight or 24-hour shifts
+            if (endDate <= startDate) {
               endDate.setDate(endDate.getDate() + 1);
             }
 
@@ -311,8 +650,10 @@ export const useAppStore = create<AppState>()(
                 notifications: [{
                   title: "Upcoming Shift 🏥",
                   body: `Your shift at ${hospital?.name || 'Hospital'} starts in 1 hour.`,
+                  largeIcon: "logo_large",
                   id: getNotificationId(updatedShift.id + '_start'),
                   schedule: { at: startScheduleTime },
+                  extra: { shiftId: updatedShift.id }
                 }]
               });
             }
@@ -324,10 +665,48 @@ export const useAppStore = create<AppState>()(
                 notifications: [{
                   title: "Almost Done! 🎉",
                   body: `${getRandomEncouragement()} You've earned ${(updatedShift.totalEarnings || 0).toLocaleString()} EGP at ${hospital?.name || 'Hospital'}.`,
+                  largeIcon: "logo_large",
                   id: getNotificationId(updatedShift.id + '_end'),
                   schedule: { at: endScheduleTime },
+                  extra: { shiftId: updatedShift.id }
                 }]
               });
+            }
+
+            // 3. Smart Checkout Reminder (10 mins after shift end)
+            const checkoutScheduleTime = new Date(endDate.getTime() + 10 * 60 * 1000);
+            if (checkoutScheduleTime > new Date()) {
+              LocalNotifications.schedule({
+                notifications: [{
+                  title: "انتهت النباطشية! 🏥",
+                  body: `لا تنسَ مراجعة وتسجيل عدد الحالات والعمليات اليوم في ${hospital?.name || 'المستشفى'}.`,
+                  largeIcon: "logo_large",
+                  id: getNotificationId(updatedShift.id + '_checkout'),
+                  schedule: { at: checkoutScheduleTime },
+                  extra: { shiftId: updatedShift.id }
+                }]
+              });
+            }
+
+            // 4. Periodic Mid-Shift Reminders (Every X hours during the shift)
+            const intervalMs = get().reminderInterval * 60 * 60 * 1000;
+            let reminderTime = new Date(startDate.getTime() + intervalMs);
+            let midIndex = 1;
+            while (reminderTime < new Date(endDate.getTime() - 30 * 60 * 1000)) {
+              if (reminderTime > new Date()) {
+                LocalNotifications.schedule({
+                  notifications: [{
+                    title: "سجل حالاتك أولاً بأول! 🏥",
+                    body: `لا تنسَ تحديث وتسجيل الحالات والعمليات التي أنجزتها حتى الآن في ${hospital?.name || 'المستشفى'}.`,
+                    largeIcon: "logo_large",
+                    id: getNotificationId(updatedShift.id + `_mid_${midIndex}`),
+                    schedule: { at: reminderTime },
+                    extra: { shiftId: updatedShift.id }
+                  }]
+                });
+              }
+              reminderTime = new Date(reminderTime.getTime() + intervalMs);
+              midIndex++;
             }
           }
         }
@@ -336,10 +715,27 @@ export const useAppStore = create<AppState>()(
         if (session?.user) {
           const updatedShift = get().shifts.find(s => s.id === id);
           if (updatedShift) {
-            await supabase.from('shifts').update({
-              ...updatedShift,
-              updatedAt: new Date().toISOString()
-            }).eq('id', id);
+            // Fire and forget
+            supabase.from('shifts').update({
+              hospital_id: updatedShift.hospitalId,
+              date: updatedShift.date instanceof Date ? updatedShift.date.toISOString() : updatedShift.date,
+              start_time: updatedShift.startTime,
+              end_time: updatedShift.endTime,
+              cases_count: updatedShift.casesCount,
+              procedures_count: updatedShift.proceduresCount,
+              includes_outpatient: updatedShift.includesOutpatient,
+              notes: updatedShift.notes ?? null,
+              custom_rate: updatedShift.customRate ?? null,
+              item_counts: updatedShift.itemCounts ?? null,
+              stored_fixed_rate: updatedShift.storedFixedRate ?? null,
+              stored_per_patient_rate: updatedShift.storedPerPatientRate ?? null,
+              stored_fixed_salary: updatedShift.storedFixedSalary ?? null,
+              total_earnings: updatedShift.totalEarnings,
+              updated_at: new Date().toISOString()
+            }).eq('id', id).then(({ error }) => {
+              if (error) console.error('Failed to update shift in cloud:', error);
+              else set({ hasUnsyncedChanges: false });
+            });
           }
         }
       },
@@ -347,25 +743,38 @@ export const useAppStore = create<AppState>()(
       deleteShift: async (id) => {
         set((state) => ({
           shifts: state.shifts.filter((s) => s.id !== id),
+          hasUnsyncedChanges: true,
         }));
-
-        if (get().notificationsEnabled) {
-          LocalNotifications.cancel({
-            notifications: [
-              { id: getNotificationId(id + '_start') },
-              { id: getNotificationId(id + '_end') },
-              { id: getNotificationId(id) }
-            ]
-          });
-        }
 
         const { data: { session } } = await supabase.auth.getSession();
         if (session?.user) {
-          await supabase.from('shifts').delete().eq('id', id);
+          // Fire and forget
+          supabase.from('shifts').delete().eq('id', id).then(({ error }) => {
+            if (error) console.error('Failed to delete shift from cloud:', error);
+            else set({ hasUnsyncedChanges: false });
+          });
+        }
+
+        // Always cancel any scheduled notifications for this shift when deleted
+        try {
+          const notificationsToCancel = [
+            { id: getNotificationId(id + '_start') },
+            { id: getNotificationId(id + '_end') },
+            { id: getNotificationId(id + '_checkout') },
+            { id: getNotificationId(id) }
+          ];
+          for (let i = 1; i <= 24; i++) {
+            notificationsToCancel.push({ id: getNotificationId(id + `_mid_${i}`) });
+          }
+          await LocalNotifications.cancel({
+            notifications: notificationsToCancel
+          });
+        } catch (e) {
+          console.error("Failed to cancel notifications on delete:", e);
         }
       },
 
-      calculateShiftEarnings: (hospitalId, casesCount, customRate, itemCounts) => {
+      calculateShiftEarnings: (hospitalId, casesCount, customRate, itemCounts, storedFixedRate, storedPerPatientRate, storedFixedSalary, multiplier = 1, multiplierType = "total", isNabatya = false) => {
         const hospital = get().hospitals.find((h) => h.id === hospitalId);
         if (!hospital) return 0;
 
@@ -373,25 +782,43 @@ export const useAppStore = create<AppState>()(
           return customRate;
         }
 
+        // Use stored rates if available, otherwise fallback to hospital current rates
+        const fRate = storedFixedRate !== undefined ? storedFixedRate : hospital.fixedRate;
+        const pRate = storedPerPatientRate !== undefined ? storedPerPatientRate : hospital.perPatientRate;
+        const fSalary = storedFixedSalary !== undefined ? storedFixedSalary : (hospital.fixedSalary || 0);
+
+        let baseEarnings = 0;
+        let itemEarnings = 0;
+
         switch (hospital.paymentModel) {
           case "fixed":
-            return hospital.fixedRate;
+            baseEarnings = fRate;
+            break;
           case "per_patient":
-            return casesCount * hospital.perPatientRate;
+            itemEarnings = casesCount * pRate;
+            break;
           case "mixed":
-            return hospital.fixedRate + casesCount * hospital.perPatientRate;
+            baseEarnings = fRate;
+            itemEarnings = casesCount * pRate;
+            break;
           case "detailed":
-            let earnings = hospital.fixedSalary || 0;
-            // FIXED: Added check for hospital.itemRates to avoid crash if undefined
+            baseEarnings = fSalary;
             if (itemCounts && hospital.itemRates && Array.isArray(hospital.itemRates)) {
               hospital.itemRates.forEach((item) => {
                 const count = itemCounts[item.id] || 0;
-                earnings += count * item.rate;
+                itemEarnings += count * item.rate;
               });
             }
-            return earnings;
-          default:
-            return 0;
+            break;
+          case "government":
+            baseEarnings = isNabatya ? fRate : 0;
+            break;
+        }
+
+        if (multiplierType === "base") {
+          return (baseEarnings * multiplier) + itemEarnings;
+        } else {
+          return (baseEarnings + itemEarnings) * multiplier;
         }
       },
 
@@ -400,15 +827,25 @@ export const useAppStore = create<AppState>()(
           userProfile: data.userProfile,
           hospitals: data.hospitals,
           shifts: data.shifts,
-          notificationsEnabled: data.notificationsEnabled || false
+          notificationsEnabled: data.notificationsEnabled || false,
+          reminderInterval: data.reminderInterval || 3
         });
       },
 
       syncData: async () => {
+        // If no changes, don't waste bandwidth/CPU on startup
+        if (!get().hasUnsyncedChanges) {
+          console.log("No unsynced changes, skipping syncData heavy lifting.");
+          return;
+        }
+
         console.log("Starting syncData...");
+        set({ isSyncing: true });
+
         const { data: { session } } = await supabase.auth.getSession();
         if (!session?.user) {
           console.log("No user session found during syncData");
+          set({ isSyncing: false, hasUnsyncedChanges: true });
           return;
         }
 
@@ -421,14 +858,18 @@ export const useAppStore = create<AppState>()(
         // 1. Upload Profiles
         const { error: profileError } = await supabase.from('profiles').upsert({
           id: userId,
-          ...state.userProfile,
+          name: state.userProfile.name,
+          title: state.userProfile.title,
+          email: state.userProfile.email,
+          gender: state.userProfile.gender,
+          fcm_token: state.userProfile.fcmToken,
           updated_at: new Date().toISOString(),
         });
         if (profileError) console.error("Error syncing profile:", profileError);
 
-        // 2. Upload/Sync Hospitals
-        for (const h of state.hospitals) {
-          const { error } = await supabase.from('hospitals').upsert({
+        // 2. Upload/Sync Hospitals (BATCH)
+        if (state.hospitals.length > 0) {
+          const hospitalsPayload = state.hospitals.map(h => ({
             id: h.id,
             user_id: userId,
             name: h.name,
@@ -439,14 +880,15 @@ export const useAppStore = create<AppState>()(
             item_rates: h.itemRates,
             color: h.color,
             created_at: h.createdAt instanceof Date ? h.createdAt.toISOString() : h.createdAt,
-            updated_at: new Date().toISOString()
-          }).select();
-          if (error) console.error("Error syncing hospital", h.name, error);
+            updated_at: h.updatedAt instanceof Date ? h.updatedAt.toISOString() : h.updatedAt,
+          }));
+          const { error } = await supabase.from('hospitals').upsert(hospitalsPayload);
+          if (error) console.error("Error batch syncing hospitals", error);
         }
 
-        // 3. Upload Shifts
-        for (const s of state.shifts) {
-          const { error } = await supabase.from('shifts').upsert({
+        // 3. Upload Shifts (BATCH)
+        if (state.shifts.length > 0) {
+          const shiftsPayload = state.shifts.map(s => ({
             id: s.id,
             user_id: userId,
             hospital_id: s.hospitalId,
@@ -459,13 +901,24 @@ export const useAppStore = create<AppState>()(
             notes: s.notes,
             custom_rate: s.customRate,
             item_counts: s.itemCounts,
+            stored_fixed_rate: s.storedFixedRate,
+            stored_per_patient_rate: s.storedPerPatientRate,
+            stored_fixed_salary: s.storedFixedSalary,
             total_earnings: s.totalEarnings,
             created_at: s.createdAt instanceof Date ? s.createdAt.toISOString() : s.createdAt,
-            updated_at: new Date().toISOString()
-          }).select();
-          if (error) console.error("Error syncing shift", s.id, error);
+            updated_at: s.updatedAt instanceof Date ? s.updatedAt.toISOString() : s.updatedAt,
+          }));
+
+          // Chunk to avoid payload limit (e.g. 100 max per request if user has many)
+          const chunkSize = 100;
+          for (let i = 0; i < shiftsPayload.length; i += chunkSize) {
+            const chunk = shiftsPayload.slice(i, i + chunkSize);
+            const { error } = await supabase.from('shifts').upsert(chunk);
+            if (error) console.error("Error batch syncing shifts chunk", error);
+          }
         }
         console.log("syncData complete.");
+        set({ isSyncing: false, hasUnsyncedChanges: false });
       },
 
       fetchData: async () => {
@@ -482,9 +935,26 @@ export const useAppStore = create<AppState>()(
           .single();
 
         if (profile) {
-          set((state) => ({
-            userProfile: { ...state.userProfile, ...profile }
-          }));
+          set((state) => {
+            // Only overwrite local name/title if they are defaults OR cloud is newer
+            const cloudUpdatedAt = profile.updated_at ? new Date(profile.updated_at).getTime() : 0;
+            const localUpdatedAt = state.userProfile.updatedAt ? new Date(state.userProfile.updatedAt).getTime() : 0;
+            
+            const shouldUpdateName = !state.userProfile.name || state.userProfile.name === "Doctor" || cloudUpdatedAt > localUpdatedAt;
+            const shouldUpdateTitle = !state.userProfile.title || state.userProfile.title === "Healthcare Professional" || cloudUpdatedAt > localUpdatedAt;
+
+            return {
+              userProfile: {
+                ...state.userProfile,
+                name: shouldUpdateName ? (profile.name || state.userProfile.name) : state.userProfile.name,
+                title: shouldUpdateTitle ? (profile.title || state.userProfile.title) : state.userProfile.title,
+                email: profile.email || state.userProfile.email,
+                gender: profile.gender || state.userProfile.gender,
+                fcmToken: profile.fcm_token || state.userProfile.fcmToken,
+                updatedAt: profile.updated_at || state.userProfile.updatedAt
+              }
+            };
+          });
         }
 
         // 2. Fetch Hospitals
@@ -506,7 +976,7 @@ export const useAppStore = create<AppState>()(
               fixedRate: h.fixed_rate,
               perPatientRate: h.per_patient_rate,
               fixedSalary: h.fixed_salary,
-              itemRates: h.item_rates
+              itemRates: typeof h.item_rates === 'string' ? JSON.parse(h.item_rates) : h.item_rates
             }))
           });
         }
@@ -529,7 +999,10 @@ export const useAppStore = create<AppState>()(
               proceduresCount: s.procedures_count,
               includesOutpatient: s.includes_outpatient,
               customRate: s.custom_rate,
-              itemCounts: s.item_counts,
+              itemCounts: typeof s.item_counts === 'string' ? JSON.parse(s.item_counts) : s.item_counts,
+              storedFixedRate: s.stored_fixed_rate,
+              storedPerPatientRate: s.stored_per_patient_rate,
+              storedFixedSalary: s.stored_fixed_salary,
               totalEarnings: s.total_earnings || 0,
               createdAt: new Date(s.created_at),
               updatedAt: new Date(s.updated_at)
@@ -543,6 +1016,7 @@ export const useAppStore = create<AppState>()(
       partialize: (state) => ({
         userProfile: state.userProfile,
         notificationsEnabled: state.notificationsEnabled,
+        reminderInterval: state.reminderInterval,
         hospitals: state.hospitals,
         shifts: state.shifts.map((s) => ({
           ...s,
@@ -550,12 +1024,16 @@ export const useAppStore = create<AppState>()(
           createdAt: s.createdAt instanceof Date ? s.createdAt.toISOString() : s.createdAt,
           updatedAt: s.updatedAt instanceof Date ? s.updatedAt.toISOString() : s.updatedAt,
         })),
+        chartType: state.chartType,
+        navIconStyle: state.navIconStyle,
+        hasUnsyncedChanges: state.hasUnsyncedChanges,
       }),
       onRehydrateStorage: () => (state) => {
         if (state) {
           // Safety check: Ensure arrays are initialized
           state.shifts = Array.isArray(state.shifts) ? state.shifts : [];
           state.hospitals = Array.isArray(state.hospitals) ? state.hospitals : [];
+          state.reminderInterval = state.reminderInterval || 3;
 
           // Convert date strings back to Date objects
           state.shifts = state.shifts.map((s: any) => ({
@@ -569,7 +1047,48 @@ export const useAppStore = create<AppState>()(
             createdAt: h.createdAt ? new Date(h.createdAt) : new Date(),
             updatedAt: h.updatedAt ? new Date(h.updatedAt) : new Date(),
           }));
+
+          // Migrate existing shifts to include hospital name, color, and stored values tags
+          state.shifts = state.shifts.map((s: any) => {
+            const hospital = state.hospitals.find((h: any) => h.id === s.hospitalId);
+            let updatedShift = { ...s };
+            
+            if (hospital) {
+              // Heal missing stored fields from active hospital
+              if (updatedShift.storedFixedSalary === undefined || updatedShift.storedFixedSalary === null) {
+                updatedShift.storedFixedSalary = hospital.fixedSalary || 0;
+              }
+              if (updatedShift.storedFixedRate === undefined || updatedShift.storedFixedRate === null) {
+                updatedShift.storedFixedRate = hospital.fixedRate || 0;
+              }
+              if (updatedShift.storedPerPatientRate === undefined || updatedShift.storedPerPatientRate === null) {
+                updatedShift.storedPerPatientRate = hospital.perPatientRate || 0;
+              }
+
+              // Snapshot metadata tags in notes
+              let notesStr = updatedShift.notes || "";
+              const hasNameTag = /\[HospitalName:\s*[^\]]+\s*\]/i.test(notesStr);
+              const hasColorTag = /\[HospitalColor:\s*[^\]]+\s*\]/i.test(notesStr);
+              const hasSalaryTag = /\[StoredFixedSalary:\s*[^\]]+\s*\]/i.test(notesStr);
+              
+              if (!hasNameTag || !hasColorTag || !hasSalaryTag) {
+                notesStr = notesStr.replace(/\s*\[HospitalName:\s*[^\]]+\s*\]/gi, "").trim();
+                notesStr = notesStr.replace(/\s*\[HospitalColor:\s*[^\]]+\s*\]/gi, "").trim();
+                notesStr = notesStr.replace(/\s*\[StoredFixedSalary:\s*[^\]]+\s*\]/gi, "").trim();
+                notesStr = notesStr.replace(/\s*\[StoredFixedRate:\s*[^\]]+\s*\]/gi, "").trim();
+                notesStr = notesStr.replace(/\s*\[StoredPaymentModel:\s*[^\]]+\s*\]/gi, "").trim();
+
+                const tag = `[HospitalName: ${hospital.name}] [HospitalColor: ${hospital.color}] [StoredFixedSalary: ${hospital.fixedSalary || 0}] [StoredFixedRate: ${hospital.fixedRate || 0}] [StoredPaymentModel: ${hospital.paymentModel}]`;
+                notesStr = notesStr ? `${notesStr}\n${tag}` : tag;
+                updatedShift.notes = notesStr;
+              }
+            }
+            return updatedShift;
+          });
         }
+        
+        // Mark as hydrated regardless of whether state was found or not
+        useAppStore.setState({ isHydrated: true });
       },
     }
   )
