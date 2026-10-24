@@ -29,3 +29,4 @@ diagnostics-report.txt
 diff.txt
 *.backup
 *.timestamp-*.mjs
+*.apk

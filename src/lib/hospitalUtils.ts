@@ -1,5 +1,57 @@
 import { Hospital, Shift, PaymentModel } from "@/types";
 
+export const HOSPITAL_COLORS = [
+  "#3b82f6", // blue
+  "#10b981", // emerald
+  "#f59e0b", // amber
+  "#8b5cf6", // violet
+  "#ec4899", // pink
+  "#06b6d4", // cyan
+  "#f97316", // orange
+  "#6366f1", // indigo
+];
+
+/**
+ * Deterministically assigns and resolves hospital accent color.
+ * Reuses hospital.color if set, otherwise hashes name or id.
+ */
+export function getHospitalColor(hospital?: { color?: string; name?: string; id?: string } | null): string {
+  if (hospital?.color && hospital.color.trim() !== "") {
+    return hospital.color;
+  }
+  const str = hospital?.name || hospital?.id || "hospital";
+  let hash = 0;
+  for (let i = 0; i < str.length; i++) {
+    hash = str.charCodeAt(i) + ((hash << 5) - hash);
+  }
+  const index = Math.abs(hash) % HOSPITAL_COLORS.length;
+  return HOSPITAL_COLORS[index];
+}
+
+/**
+ * Human-readable payment model summaries
+ */
+export function getPaymentModelSummary(hospital: Hospital): string {
+  switch (hospital.paymentModel) {
+    case "fixed":
+      return `Fixed rate • ${hospital.fixedRate || 0} EGP`;
+    case "per_patient":
+      return `Per patient • ${hospital.perPatientRate || 0} EGP/case`;
+    case "mixed":
+      return `Mixed • ${hospital.fixedRate || 0} EGP + ${hospital.perPatientRate || 0}/case`;
+    case "detailed":
+      return hospital.fixedSalary
+        ? `Detailed • Base ${hospital.fixedSalary} EGP`
+        : "Detailed items";
+    case "government":
+      return hospital.fixedSalary
+        ? `Government • ${hospital.fixedSalary} EGP/mo`
+        : "Government / Miri";
+    default:
+      return "Standard";
+  }
+}
+
 export interface HospitalDetails {
   id: string;
   name: string;
@@ -26,7 +78,7 @@ export function getHospitalDetails(
     return {
       id: h.id,
       name: h.name,
-      color: h.color || "#3b82f6",
+      color: getHospitalColor(h),
       paymentModel: h.paymentModel,
       fixedSalary: h.fixedSalary || 0,
       fixedRate: h.fixedRate || 0,

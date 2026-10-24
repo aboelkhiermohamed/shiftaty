@@ -19,6 +19,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { useToast } from "@/hooks/use-toast";
 import { sounds } from "@/lib/sound";
+import { getHospitalColor } from "@/lib/hospitalUtils";
 
 
 
@@ -138,14 +139,17 @@ export const ShiftCard = memo(({ shift, onClick, delay = 0 }: ShiftCardProps) =>
   };
 
   const duration = calculateDuration();
-  const hospitalColor = hospital?.color || snapshotHospitalColor || "#3b82f6";
+  const hospitalColor = getHospitalColor({
+    color: hospital?.color || snapshotHospitalColor,
+    name: hospital?.name || snapshotHospitalName,
+    id: shift.hospitalId,
+  });
 
   return (
     <motion.div
-      initial={{ opacity: 0, y: 15 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ delay, duration: 0.4, ease: [0.23, 1, 0.32, 1] }}
-      whileHover={{ y: -4, scale: 1.01 }}
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      transition={{ duration: 0.15 }}
       whileTap={{ scale: 0.98 }}
       onClick={onClick || handleEditNavigate}
       style={{ willChange: "transform, opacity" }}

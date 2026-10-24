@@ -44,12 +44,12 @@ export function StatCard({
 
   return (
     <motion.div
-      initial={{ opacity: 0, y: 15 }}
+      initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ delay, duration: 0.3, ease: "easeOut" }}
+      transition={{ duration: 0.2, ease: "easeOut" }}
       style={{ willChange: "transform, opacity" }}
       className={cn(
-        "rounded-2xl p-4 shadow-sm border",
+        "rounded-2xl p-3.5 sm:p-4 shadow-sm border",
         styles.container,
         className
       )}

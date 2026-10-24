@@ -8,10 +8,13 @@ import { HashRouter, Routes, Route, useNavigate, Navigate } from "react-router-d
 import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
 import Dashboard from "./pages/Dashboard";
+import Shifts from "./pages/Shifts";
 import AddShift from "./pages/AddShift";
 import EditShift from "./pages/EditShift";
 import Hospitals from "./pages/Hospitals";
+import Reports from "./pages/Reports";
 import Settings from "./pages/Settings";
+import BackupSync from "./pages/BackupSync";
 import Profile from "./pages/Profile";
 import Login from "./pages/Login";
 import NotFound from "./pages/NotFound";
@@ -182,6 +185,7 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
 };
 
 import { AnnouncementDialog } from "@/components/AnnouncementDialog"; // Import it
+import { ForceUpdateDialog } from "@/components/ForceUpdateDialog";
 
 // ... (rest of imports)
 
@@ -191,6 +195,7 @@ const App = () => (
       <TooltipProvider>
         <Toaster />
         <Sonner />
+        <ForceUpdateDialog /> {/* Mandatory Force Update Blocker */}
         <AnnouncementDialog /> {/* Add the dialog here */}
         <HashRouter>
           <DeepLinkListener /> {/* Listen for deep links globally */}
@@ -203,6 +208,14 @@ const App = () => (
               element={
                 <ProtectedRoute>
                   <Dashboard />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/shifts"
+              element={
+                <ProtectedRoute>
+                  <Shifts />
                 </ProtectedRoute>
               }
             />
@@ -223,10 +236,26 @@ const App = () => (
               }
             />
             <Route
+              path="/reports"
+              element={
+                <ProtectedRoute>
+                  <Reports />
+                </ProtectedRoute>
+              }
+            />
+            <Route
               path="/settings"
               element={
                 <ProtectedRoute>
                   <Settings />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/backup-sync"
+              element={
+                <ProtectedRoute>
+                  <BackupSync />
                 </ProtectedRoute>
               }
             />

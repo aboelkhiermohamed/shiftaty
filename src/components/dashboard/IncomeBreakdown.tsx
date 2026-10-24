@@ -232,12 +232,12 @@ export function IncomeBreakdown({ month, isPrivacyMode = false }: IncomeBreakdow
 
   return (
     <motion.div
-      initial={{ opacity: 0, y: 20 }}
+      initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ delay: 0.1, duration: 0.2 }}
-      className="bg-card rounded-2xl p-5 shadow-sm border border-border"
+      transition={{ duration: 0.2 }}
+      className="bg-card rounded-2xl p-4 sm:p-5 shadow-sm border border-border"
     >
-      <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-5">
+      <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3.5">
         MONTHLY BREAKDOWN
       </h3>
 
@@ -293,12 +293,9 @@ export function IncomeBreakdown({ month, isPrivacyMode = false }: IncomeBreakdow
 
         {/* Right Side: List */}
         <div className="flex-1 space-y-4">
-          {data.map((item, index) => (
-            <motion.div
+          {data.map((item) => (
+            <div
               key={item.id}
-              initial={{ opacity: 0, x: -10 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ delay: 0.3 + index * 0.05 }}
               className="flex flex-col"
             >
               <div
@@ -364,7 +361,7 @@ export function IncomeBreakdown({ month, isPrivacyMode = false }: IncomeBreakdow
                   </motion.div>
                 )}
               </AnimatePresence>
-            </motion.div>
+            </div>
           ))}
         </div>
       </div>

@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { format, startOfMonth, endOfMonth, subMonths, addMonths } from "date-fns";
-import { ChevronLeft, ChevronRight, Wallet, Calendar, Users, Clock, Cloud, User } from "lucide-react";
+import { ChevronLeft, ChevronRight, Wallet, Calendar, Users, Clock, Cloud, User, Menu } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useNavigate } from "react-router-dom";
 import { AppLayout } from "@/components/layout/AppLayout";
@@ -23,6 +23,7 @@ export default function Dashboard() {
   const syncData = useAppStore((state) => state.syncData);
   const isPrivacyMode = useAppStore((state) => state.isPrivacyMode);
   const setPrivacyMode = useAppStore((state) => state.setPrivacyMode);
+  const setSideMenuOpen = useAppStore((state) => state.setSideMenuOpen);
   const navigate = useNavigate();
 
   const monthlyStats = useMemo(() => {
@@ -72,34 +73,32 @@ export default function Dashboard() {
 
   return (
     <AppLayout>
-      <div className="px-2 pt-6 pb-6 space-y-5">
-        {/* Greeting and Profile */}
-        <div className="flex items-start justify-between px-2 mt-6 gap-4">
-          <div className="flex-1 min-w-0">
-            <h1 className="text-2xl font-black text-slate-900 dark:text-white leading-tight">
-              {greeting}, <span className="inline-flex items-center gap-2 whitespace-nowrap">
-                {displayName}
-                <motion.span
-                  animate={{ rotate: [0, 15, -10, 15, 0] }}
-                  transition={{
-                    duration: 2.5,
-                    repeat: Infinity,
-                    repeatDelay: 1,
-                    ease: "easeInOut",
-                  }}
-                  className="inline-block"
-                  style={{ transformOrigin: "bottom right" }}
-                >
-                  👋
-                </motion.span>
+      <div className="px-4 pt-3 pb-10 space-y-4">
+        {/* Greeting and Profile Header */}
+        <div className="flex items-center justify-between gap-3">
+          <div className="flex items-center gap-3 min-w-0 flex-1">
+            <button
+              onClick={() => setSideMenuOpen(true)}
+              aria-label="Open Side Menu"
+              className="w-10 h-10 rounded-xl bg-slate-100 dark:bg-[#1C1C1E] hover:bg-slate-200 dark:hover:bg-white/10 flex items-center justify-center text-foreground touch-feedback transition-colors shrink-0 border border-slate-200/80 dark:border-white/5 active:scale-95 shadow-sm"
+            >
+              <Menu className="w-5 h-5 text-slate-700 dark:text-white/80" />
+            </button>
+            <div className="flex flex-col min-w-0 flex-1">
+              <span className="text-[11px] font-semibold tracking-wider uppercase text-slate-400 dark:text-white/40 flex items-center gap-1">
+                {greeting} <span className="text-sm">👋</span>
               </span>
-            </h1>
+              <h1 className="text-base sm:text-lg font-bold text-slate-900 dark:text-white leading-tight truncate">
+                {displayName}
+              </h1>
+            </div>
           </div>
           <button
             onClick={() => navigate("/profile")}
-            className="flex-shrink-0 relative group active:scale-95 transition-transform"
+            className="flex-shrink-0 relative active:scale-95 transition-transform"
+            aria-label="Profile"
           >
-            <div className="w-10 h-10 rounded-full border-2 border-slate-200 dark:border-white/10 overflow-hidden shadow-md">
+            <div className="w-10 h-10 rounded-full border-2 border-primary/20 dark:border-white/10 overflow-hidden shadow-sm">
               {userProfile?.avatar ? (
                 <img
                   src={userProfile.avatar}
@@ -107,7 +106,7 @@ export default function Dashboard() {
                   className="w-full h-full object-cover"
                 />
               ) : (
-                <div className="w-full h-full bg-primary/20 flex items-center justify-center text-primary font-bold">
+                <div className="w-full h-full bg-primary/10 flex items-center justify-center text-primary font-bold text-sm">
                   {displayName.charAt(0).toUpperCase()}
                 </div>
               )}
@@ -116,66 +115,62 @@ export default function Dashboard() {
         </div>
 
         {/* Month Selector & Sync Status */}
-        <div className="flex items-center justify-between px-2 mt-6 h-12">
-          <div className="flex items-center bg-slate-100 dark:bg-[#1C1C1E]/80 rounded-2xl p-1.5 border border-slate-200 dark:border-white/5 shadow-sm transition-colors duration-300">
+        <div className="flex items-center justify-between gap-2 h-10">
+          <div className="flex items-center bg-slate-100 dark:bg-[#1C1C1E] rounded-xl p-1 border border-slate-200/80 dark:border-white/5 shadow-sm">
             <button
               onClick={prevMonth}
-              className="w-9 h-9 flex items-center justify-center hover:bg-white dark:hover:bg-white/10 rounded-xl transition-all active:scale-90 text-slate-400 dark:text-white/40"
+              className="w-8 h-8 flex items-center justify-center hover:bg-white dark:hover:bg-white/10 rounded-lg transition-all active:scale-90 text-slate-500 dark:text-white/50"
+              aria-label="Previous Month"
             >
               <ChevronLeft className="h-4 w-4" />
             </button>
 
-            <div className="px-4 min-w-[120px] flex items-center justify-center">
-              <span className="text-[13px] font-bold text-slate-700 dark:text-white/90 text-center tracking-tight translate-y-[0.5px]">
+            <div className="px-3 min-w-[110px] flex items-center justify-center">
+              <span className="text-xs font-bold text-slate-800 dark:text-white/90 text-center tracking-tight">
                 {format(currentMonth, "MMMM yyyy")}
               </span>
             </div>
 
             <button
               onClick={nextMonth}
-              className="w-9 h-9 flex items-center justify-center hover:bg-white dark:hover:bg-white/10 rounded-xl transition-all active:scale-90 text-slate-400 dark:text-white/40"
+              className="w-8 h-8 flex items-center justify-center hover:bg-white dark:hover:bg-white/10 rounded-lg transition-all active:scale-90 text-slate-500 dark:text-white/50"
+              aria-label="Next Month"
             >
               <ChevronRight className="h-4 w-4" />
             </button>
           </div>
 
-          <div className="flex items-center gap-2 pr-1 h-full pt-1">
-            <button 
-              onClick={(e) => {
-                e.stopPropagation();
-                if (!isSyncing) syncData();
-              }}
-              disabled={isSyncing}
-              className="flex items-center gap-2 translate-y-[-1px] hover:opacity-80 active:scale-95 transition-all outline-none"
-            >
-              <div className={cn(
-                "w-1.5 h-1.5 rounded-full",
-                isSyncing ? "bg-amber-500 animate-pulse" : 
-                hasUnsyncedChanges ? "bg-orange-500/80 shadow-[0_0_8px_rgba(249,115,22,0.4)]" : 
-                "bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]"
-              )} />
-              <span className={cn(
-                "text-[10px] font-black tracking-[0.1em] uppercase",
-                isSyncing ? "text-amber-500" :
-                hasUnsyncedChanges ? "text-orange-500/80" : 
-                "text-slate-400 dark:text-emerald-500/60"
-              )}>
-                {isSyncing ? "Syncing" : hasUnsyncedChanges ? "Unsynced" : "Synced"}
-              </span>
-            </button>
-          </div>
+          <button 
+            onClick={(e) => {
+              e.stopPropagation();
+              if (!isSyncing) syncData();
+            }}
+            disabled={isSyncing}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-100/80 dark:bg-[#1C1C1E] border border-slate-200/60 dark:border-white/5 hover:bg-slate-200/60 dark:hover:bg-white/10 active:scale-95 transition-all outline-none"
+          >
+            <div className={cn(
+              "w-2 h-2 rounded-full",
+              isSyncing ? "bg-amber-500 animate-pulse" : 
+              hasUnsyncedChanges ? "bg-orange-500 shadow-[0_0_8px_rgba(249,115,22,0.5)]" : 
+              "bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]"
+            )} />
+            <span className={cn(
+              "text-[10px] font-bold tracking-wider uppercase",
+              isSyncing ? "text-amber-500" :
+              hasUnsyncedChanges ? "text-orange-500" : 
+              "text-emerald-600 dark:text-emerald-400"
+            )}>
+              {isSyncing ? "Syncing" : hasUnsyncedChanges ? "Unsynced" : "Synced"}
+            </span>
+          </button>
         </div>
 
         {/* Stats Grid */}
-        <div
-          className="px-2 grid grid-cols-2 gap-3"
-          style={{ willChange: "transform, opacity" }}
-        >
+        <div className="grid grid-cols-2 gap-2.5">
           <FeaturedStatCard
             title="Total Income"
             value={(monthlyStats.totalIncome || 0).toLocaleString()}
             subtitle="Revenue this month"
-            delay={0.1}
             isPrivacyMode={isPrivacyMode}
             onTogglePrivacy={() => setPrivacyMode(!isPrivacyMode)}
           />
@@ -186,7 +181,6 @@ export default function Dashboard() {
             subtitle="completed"
             icon={Calendar}
             variant="success"
-            delay={0.2}
           />
           <StatCard
             title="Total Hours"
@@ -194,60 +188,57 @@ export default function Dashboard() {
             subtitle="worked this month"
             icon={Clock}
             variant="warning"
-            delay={0.3}
           />
         </div>
 
         {/* Income Breakdown */}
-        <div className="px-2 mt-6" style={{ willChange: "transform, opacity" }}>
+        <div>
           <IncomeBreakdown month={currentMonth} isPrivacyMode={isPrivacyMode} />
         </div>
 
         {/* Recent Shifts */}
-        <div className="px-2 mt-6">
-          <motion.div
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.2, duration: 0.3 }}
-            style={{ willChange: "transform, opacity" }}
-          >
-            {/* Sections Header */}
-            <h2 className="px-3 text-[10px] font-black text-slate-400 dark:text-white/30 uppercase tracking-[0.2em] mb-4">
+        <div className="space-y-3 pt-1">
+          {/* Section Header */}
+          <div className="flex items-center justify-between px-1">
+            <h2 className="text-[11px] font-bold text-slate-400 dark:text-white/40 uppercase tracking-wider">
               Monthly Shifts
             </h2>
+            <button
+              onClick={() => navigate("/shifts")}
+              className="text-xs font-semibold text-primary hover:underline flex items-center gap-1 active:scale-95 transition-transform"
+            >
+              <span>View All Shifts</span>
+              <ChevronRight className="w-3.5 h-3.5" />
+            </button>
+          </div>
 
-            {monthlyStats.recentShifts.length === 0 ? (
-              <div className="bg-card rounded-xl p-8 text-center border border-border">
-                <motion.div
-                  animate={{ y: [0, -6, 0] }}
-                  transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
-                  style={{ willChange: "transform" }}
-                >
-                  <Calendar className="h-12 w-12 mx-auto text-muted-foreground mb-3" />
-                </motion.div>
-                <p className="text-muted-foreground">No shifts this month</p>
-                <p className="text-sm text-muted-foreground mt-1">
-                  Tap "Add Shift" to log your first shift
-                </p>
+          {monthlyStats.recentShifts.length === 0 ? (
+            <div className="bg-card rounded-2xl p-7 text-center border border-border/80">
+              <div className="w-11 h-11 rounded-2xl bg-secondary/80 mx-auto flex items-center justify-center text-muted-foreground mb-2.5">
+                <Calendar className="h-5 w-5" />
               </div>
-            ) : (
-              <div className="space-y-3">
-                <AnimatePresence mode="popLayout" key={format(currentMonth, "yyyy-MM")}>
-                  {monthlyStats.recentShifts.map((shift, index) => {
-                    const hospital = hospitals.find(h => h.id === shift.hospitalId);
-                    return (
-                      <TelegramVanishWrapper
-                        key={shift.id}
-                        hospitalColor={hospital?.color}
-                      >
-                        <ShiftCard shift={shift} delay={0.1 + index * 0.03} />
-                      </TelegramVanishWrapper>
-                    );
-                  })}
-                </AnimatePresence>
-              </div>
-            )}
-          </motion.div>
+              <p className="text-sm font-semibold text-foreground">No shifts this month</p>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                Tap "Add Shift" to log your first shift
+              </p>
+            </div>
+          ) : (
+            <div className="space-y-2.5">
+              <AnimatePresence mode="popLayout" initial={false}>
+                {monthlyStats.recentShifts.map((shift) => {
+                  const hospital = hospitals.find(h => h.id === shift.hospitalId);
+                  return (
+                    <TelegramVanishWrapper
+                      key={shift.id}
+                      hospitalColor={hospital?.color}
+                    >
+                      <ShiftCard shift={shift} delay={0} />
+                    </TelegramVanishWrapper>
+                  );
+                })}
+              </AnimatePresence>
+            </div>
+          )}
         </div>
       </div>
     </AppLayout>

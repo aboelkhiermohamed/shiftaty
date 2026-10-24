@@ -28,11 +28,14 @@ interface AppState {
   navIconStyle: NavIconStyle;
   isPrivacyMode: boolean;
   isHydrated: boolean;
+  lastSyncedAt?: string | null;
+  isSideMenuOpen: boolean;
 
   // Profile actions
   updateUserProfile: (profile: Partial<UserProfile>) => void;
   setNotificationsEnabled: (enabled: boolean) => Promise<boolean>;
   setReminderInterval: (hours: number) => void;
+  setSideMenuOpen: (open: boolean) => void;
   initPushNotifications: () => Promise<void>;
 
   // Hospital actions
@@ -131,11 +134,14 @@ export const useAppStore = create<AppState>()(
       navIconStyle: "modern",
       isPrivacyMode: false,
       isHydrated: false,
+      lastSyncedAt: null,
+      isSideMenuOpen: false,
 
       setChartType: (type) => set({ chartType: type }),
       setNavIconStyle: (style) => set({ navIconStyle: style }),
       setPrivacyMode: (enabled) => set({ isPrivacyMode: enabled }),
       setReminderInterval: (hours) => set({ reminderInterval: hours }),
+      setSideMenuOpen: (open) => set({ isSideMenuOpen: open }),
 
       updateUserProfile: async (profile) => {
         const now = new Date().toISOString();
@@ -918,7 +924,7 @@ export const useAppStore = create<AppState>()(
           }
         }
         console.log("syncData complete.");
-        set({ isSyncing: false, hasUnsyncedChanges: false });
+        set({ isSyncing: false, hasUnsyncedChanges: false, lastSyncedAt: new Date().toISOString() });
       },
 
       fetchData: async () => {
@@ -1009,6 +1015,7 @@ export const useAppStore = create<AppState>()(
             }))
           });
         }
+        set({ lastSyncedAt: new Date().toISOString() });
       },
     }),
     {
@@ -1027,6 +1034,7 @@ export const useAppStore = create<AppState>()(
         chartType: state.chartType,
         navIconStyle: state.navIconStyle,
         hasUnsyncedChanges: state.hasUnsyncedChanges,
+        lastSyncedAt: state.lastSyncedAt,
       }),
       onRehydrateStorage: () => (state) => {
         if (state) {

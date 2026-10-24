@@ -35,6 +35,10 @@ import { useAppStore } from "@/stores/appStore";
 import { useToast } from "@/hooks/use-toast";
 import { useNavigate } from "react-router-dom";
 import { cn } from "@/lib/utils";
+import {
+  HospitalPickerSheet,
+  HospitalPickerTrigger,
+} from "@/components/hospitals/HospitalPickerSheet";
 
 /** Returns shift duration in hours (handles overnight shifts). */
 function calcShiftHours(start: string, end: string): number {
@@ -62,6 +66,7 @@ export default function AddShift() {
   const [isSaving, setIsSaving] = useState(false);
   const [isNabatya, setIsNabatya] = useState(false);
   const [isCalendarOpen, setIsCalendarOpen] = useState(false);
+  const [isHospitalPickerOpen, setIsHospitalPickerOpen] = useState(false);
 
   // Partial-shift dialog
   const [partialDialogOpen, setPartialDialogOpen] = useState(false);
@@ -230,29 +235,24 @@ export default function AddShift() {
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.025, duration: 0.2 }}
+              className="space-y-1.5"
             >
-              <Label>Hospital</Label>
-              <Select value={hospitalId} onValueChange={(id) => {
-                setHospitalId(id);
-                setIsNabatya(false);
-              }}>
-                <SelectTrigger className="mt-1.5">
-                  <SelectValue placeholder="Select hospital" />
-                </SelectTrigger>
-                <SelectContent>
-                  {hospitals.map((hospital) => (
-                    <SelectItem key={hospital.id} value={hospital.id}>
-                      <div className="flex items-center gap-2">
-                        <div
-                          className="w-3 h-3 rounded-full"
-                          style={{ backgroundColor: hospital.color }}
-                        />
-                        {hospital.name}
-                      </div>
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                Hospital
+              </Label>
+              <HospitalPickerTrigger
+                selectedHospitalId={hospitalId}
+                onClick={() => setIsHospitalPickerOpen(true)}
+              />
+              <HospitalPickerSheet
+                open={isHospitalPickerOpen}
+                onOpenChange={setIsHospitalPickerOpen}
+                selectedHospitalId={hospitalId}
+                onSelectHospital={(id) => {
+                  setHospitalId(id);
+                  setIsNabatya(false);
+                }}
+              />
             </motion.div>
 
             {/* Payment Model Summary */}

@@ -23,12 +23,12 @@ export function FeaturedStatCard({
 }: FeaturedStatCardProps) {
     return (
         <motion.div
-            initial={{ opacity: 0, y: 15 }}
+            initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ delay, duration: 0.35, ease: "easeOut" }}
+            transition={{ duration: 0.2, ease: "easeOut" }}
             style={{ willChange: "transform, opacity" }}
             className={cn(
-                "relative col-span-2 overflow-hidden rounded-[24px] p-5 text-white shadow-lg",
+                "relative col-span-2 overflow-hidden rounded-2xl p-5 text-white shadow-md",
                 "bg-gradient-to-br from-blue-500 via-blue-400 to-emerald-400",
                 className
             )}
