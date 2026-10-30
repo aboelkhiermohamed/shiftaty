@@ -74,7 +74,7 @@ interface AppState {
 
   // Data management
   importData: (data: AppState) => void;
-  syncData: (force?: boolean) => Promise<void>;
+  syncData: (force?: boolean) => Promise<{ success: boolean; reason?: 'no_session' | 'network_error' | 'none' }>;
   fetchData: () => Promise<void>;
   setChartType: (type: "pie" | "bar" | "list" | "donut") => void;
   setNavIconStyle: (style: NavIconStyle) => void;
@@ -166,11 +166,9 @@ export const useAppStore = create<AppState>()(
             const stateProfile = get().userProfile;
             const { error } = await supabase.from('profiles').upsert({
               id: session.user.id,
-              name: stateProfile.name,
-              title: stateProfile.title,
-              email: stateProfile.email,
-              gender: stateProfile.gender,
-              fcm_token: stateProfile.fcmToken,
+              name: stateProfile.name || "Doctor",
+              title: stateProfile.title || "Healthcare Professional",
+              fcm_token: stateProfile.fcmToken || null,
               updated_at: now,
             });
 
@@ -858,7 +856,7 @@ export const useAppStore = create<AppState>()(
         // If no changes and not forced, don't waste bandwidth/CPU
         if (!get().hasUnsyncedChanges && !force) {
           console.log("No unsynced changes, skipping syncData heavy lifting.");
-          return;
+          return { success: true, reason: 'none' };
         }
 
         console.log("Starting syncData...");
@@ -866,9 +864,9 @@ export const useAppStore = create<AppState>()(
 
         const { data: { session } } = await supabase.auth.getSession();
         if (!session?.user) {
-          console.log("No user session found during syncData");
-          set({ isSyncing: false, hasUnsyncedChanges: true });
-          return;
+          console.log("No user session found during syncData (guest mode)");
+          set({ isSyncing: false });
+          return { success: false, reason: 'no_session' };
         }
 
         const userId = session.user.id;
@@ -879,14 +877,12 @@ export const useAppStore = create<AppState>()(
 
         let hasSyncError = false;
 
-        // 1. Upload Profiles
+        // 1. Upload Profiles (valid Supabase columns only: id, name, title, fcm_token, updated_at)
         const { error: profileError } = await supabase.from('profiles').upsert({
           id: userId,
-          name: state.userProfile.name,
-          title: state.userProfile.title,
-          email: state.userProfile.email,
-          gender: state.userProfile.gender,
-          fcm_token: state.userProfile.fcmToken,
+          name: state.userProfile.name || "Doctor",
+          title: state.userProfile.title || "Healthcare Professional",
+          fcm_token: state.userProfile.fcmToken || null,
           updated_at: new Date().toISOString(),
         });
         if (profileError) {
@@ -956,6 +952,8 @@ export const useAppStore = create<AppState>()(
           hasUnsyncedChanges: hasSyncError,
           lastSyncedAt: hasSyncError ? get().lastSyncedAt : new Date().toISOString(),
         });
+
+        return { success: !hasSyncError, reason: hasSyncError ? 'network_error' : 'none' };
       },
 
       fetchData: async () => {

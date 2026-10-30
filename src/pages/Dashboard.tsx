@@ -148,17 +148,31 @@ export default function Dashboard() {
               e.stopPropagation();
               if (isSyncing) return;
               try {
-                await syncData(true);
-                sounds.playSuccess();
-                toast({
-                  title: "تمت المزامنة بنجاح",
-                  description: "تم تحديث ومزامنة بياناتك مع السحابة بنجاح.",
-                });
+                const res = await syncData(true);
+                if (res.success) {
+                  sounds.playSuccess();
+                  toast({
+                    title: "تمت المزامنة بنجاح",
+                    description: "تم تحديث ومزامنة بياناتك مع السحابة بنجاح.",
+                  });
+                } else if (res.reason === 'no_session') {
+                  toast({
+                    title: "تنبيه المزامنة السحابية",
+                    description: "أنت مسجل كضيف، يرجى تسجيل الدخول بحسابك لحفظ ومزامنة البيانات في السحابة.",
+                    variant: "destructive",
+                  });
+                } else {
+                  toast({
+                    title: "تعذر المزامنة",
+                    description: "تعذر الاتصال بالسحابة، يرجى التحقق من اتصال الإنترنت.",
+                    variant: "destructive",
+                  });
+                }
               } catch (err) {
                 console.error("Sync error:", err);
                 toast({
                   title: "فشلت المزامنة",
-                  description: "تعذر الاتصال بالسحابة، يرجى المحاولة لاحقاً.",
+                  description: "حدث خطأ غير متوقع أثناء المزامنة.",
                   variant: "destructive",
                 });
               }

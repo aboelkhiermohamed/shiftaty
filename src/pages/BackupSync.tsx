@@ -71,12 +71,26 @@ export default function BackupSync() {
 
     try {
       const { syncData, fetchData } = useAppStore.getState();
-      await syncData();
-      await fetchData();
-      toast({
-        title: "Sync Complete",
-        description: "Your shifts and hospitals are now securely in sync.",
-      });
+      const res = await syncData(true);
+      if (res.success) {
+        await fetchData();
+        toast({
+          title: "Sync Complete",
+          description: "Your shifts and hospitals are now securely in sync.",
+        });
+      } else if (res.reason === 'no_session') {
+        toast({
+          title: "Account Required",
+          description: "You are currently in guest mode. Please sign in to sync with cloud.",
+          variant: "destructive",
+        });
+      } else {
+        toast({
+          title: "Sync Failed",
+          description: "Please check your network connection and try again.",
+          variant: "destructive",
+        });
+      }
     } catch (e) {
       console.error("Cloud sync failed:", e);
       toast({
