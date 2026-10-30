@@ -100,17 +100,35 @@ export function SideMenu() {
           className="w-[85vw] max-w-[340px] p-0 flex flex-col bg-background/95 backdrop-blur-xl border-r border-border/60"
         >
           {/* Header */}
-          <div className="p-5 pb-3 border-b border-border/40 flex items-center justify-between pr-10">
-            <div className="flex items-center gap-2.5">
-              <div className="w-8 h-8 rounded-xl bg-primary flex items-center justify-center text-primary-foreground font-black text-sm shadow-md shadow-primary/20">
-                S
+          <div className="p-4 pb-3 border-b border-border/40 flex items-center justify-between pr-14">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-primary/15 to-primary/5 border border-primary/25 flex items-center justify-center p-1.5 shadow-sm shrink-0">
+                <img
+                  src="./logo.png"
+                  alt="Shiftaty Logo"
+                  className="w-full h-full object-contain drop-shadow-sm"
+                  onError={(e) => {
+                    const target = e.currentTarget as HTMLElement;
+                    target.style.display = "none";
+                    const fallback = target.parentElement?.querySelector(".logo-fallback") as HTMLElement;
+                    if (fallback) fallback.style.display = "flex";
+                  }}
+                />
+                <div className="logo-fallback hidden w-full h-full rounded-xl bg-primary items-center justify-center text-white font-black text-sm">
+                  ش
+                </div>
               </div>
-              <div>
-                <span className="font-extrabold text-base tracking-tight text-foreground">
-                  Shiftaty
-                </span>
-                <span className="text-[10px] text-muted-foreground block -mt-0.5">
-                  Menu & Utilities
+              <div className="min-w-0">
+                <div className="flex items-center gap-1.5">
+                  <span className="font-extrabold text-base tracking-tight text-foreground">
+                    Shiftaty
+                  </span>
+                  <span className="text-[11px] font-bold text-primary px-1.5 py-0.5 rounded-md bg-primary/10">
+                    شفتاتي
+                  </span>
+                </div>
+                <span className="text-[10px] text-muted-foreground block -mt-0.5 font-medium">
+                  Medical Shift Manager
                 </span>
               </div>
             </div>

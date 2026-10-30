@@ -1,8 +1,7 @@
+import { memo, useMemo, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { PieChart, Pie, Cell, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip } from "recharts";
+import { PieChart, Pie, Cell, ResponsiveContainer, BarChart, Bar, XAxis, YAxis } from "recharts";
 import { useAppStore } from "@/stores/appStore";
-import { useMemo, useState } from "react";
-import { ChevronDown, ChevronUp } from "lucide-react";
 import { getHospitalDetails } from "@/lib/hospitalUtils";
 
 interface IncomeBreakdownProps {
@@ -10,7 +9,7 @@ interface IncomeBreakdownProps {
   isPrivacyMode?: boolean;
 }
 
-export function IncomeBreakdown({ month, isPrivacyMode = false }: IncomeBreakdownProps) {
+export const IncomeBreakdown = memo(function IncomeBreakdown({ month, isPrivacyMode = false }: IncomeBreakdownProps) {
   const hospitals = useAppStore((state) => state.hospitals);
   const shifts = useAppStore((state) => state.shifts);
   const chartType = useAppStore((state) => state.chartType);
@@ -251,6 +250,7 @@ export function IncomeBreakdown({ month, isPrivacyMode = false }: IncomeBreakdow
                   <Bar 
                     dataKey="value" 
                     radius={[4, 4, 0, 0]}
+                    isAnimationActive={false}
                   >
                     {data.map((entry, index) => (
                       <Cell key={`cell-${index}`} fill={entry.color} />
@@ -270,6 +270,7 @@ export function IncomeBreakdown({ month, isPrivacyMode = false }: IncomeBreakdow
                     paddingAngle={chartType === "donut" ? 4 : 0}
                     dataKey="value"
                     stroke="none"
+                    isAnimationActive={false}
                   >
                     {data.map((entry, index) => (
                       <Cell key={`cell-${index}`} fill={entry.color} />
@@ -367,4 +368,4 @@ export function IncomeBreakdown({ month, isPrivacyMode = false }: IncomeBreakdow
       </div>
     </motion.div>
   );
-}
+});

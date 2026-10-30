@@ -13,11 +13,14 @@
         <item name="windowActionBar">false</item>
         <item name="windowNoTitle">true</item>
         <item name="android:background">@null</item>
-        <!-- Edge-to-edge: draw behind status bar and navigation bar -->
+        <!-- Full edge-to-edge: draw behind status bar and navigation bar -->
         <item name="android:windowDrawsSystemBarBackgrounds">true</item>
         <item name="android:statusBarColor">@android:color/transparent</item>
         <item name="android:navigationBarColor">@android:color/transparent</item>
-        <item name="android:windowLayoutInDisplayCutoutMode">shortEdges</item>
+        <!-- Support display cutouts on all edges (notch/hole-punch) -->
+        <item name="android:windowLayoutInDisplayCutoutMode">always</item>
+        <!-- Disable default window animations: React/Capacitor handles all transitions -->
+        <item name="android:windowAnimationStyle">@null</item>
     </style>
 
 

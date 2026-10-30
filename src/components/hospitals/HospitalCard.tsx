@@ -1,4 +1,4 @@
-import React from "react";
+import React, { memo, useMemo } from "react";
 import { Hospital, Shift } from "@/types";
 import { HospitalIcon } from "./HospitalIcon";
 import { getHospitalColor, getPaymentModelSummary } from "@/lib/hospitalUtils";
@@ -26,19 +26,22 @@ interface HospitalCardProps {
   onDelete: (hospital: Hospital) => void;
 }
 
-export function HospitalCard({
+export const HospitalCard = memo(function HospitalCard({
   hospital,
   shifts = [],
   onEdit,
   onDelete,
 }: HospitalCardProps) {
-  const hospitalColor = getHospitalColor(hospital);
-  const hospitalShifts = shifts.filter((s) => s.hospitalId === hospital.id);
-  const totalShiftsCount = hospitalShifts.length;
-  const totalEarnings = hospitalShifts.reduce(
-    (sum, s) => sum + (s.totalEarnings || 0),
-    0
-  );
+  const hospitalColor = useMemo(() => getHospitalColor(hospital), [hospital]);
+  const { totalShiftsCount, totalEarnings } = useMemo(() => {
+    const hospitalShifts = shifts.filter((s) => s.hospitalId === hospital.id);
+    const count = hospitalShifts.length;
+    const earnings = hospitalShifts.reduce(
+      (sum, s) => sum + (s.totalEarnings || 0),
+      0
+    );
+    return { totalShiftsCount: count, totalEarnings: earnings };
+  }, [shifts, hospital.id]);
 
   return (
     <div className="bg-card rounded-2xl p-4 border border-border/70 shadow-sm hover:border-border transition-all duration-200">
@@ -145,4 +148,4 @@ export function HospitalCard({
       </div>
     </div>
   );
-}
+});

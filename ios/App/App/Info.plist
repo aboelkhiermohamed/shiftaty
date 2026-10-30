@@ -47,5 +47,13 @@
 	</array>
 	<key>UIViewControllerBasedStatusBarAppearance</key>
 	<true/>
+	<key>NSCameraUsageDescription</key>
+	<string>Shiftaty needs camera access to allow you to take and update your profile picture.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>Shiftaty needs photo library access to allow you to choose a profile picture.</string>
+	<key>NSPhotoLibraryAddUsageDescription</key>
+	<string>Shiftaty needs permission to save images or reports to your photos.</string>
+	<key>ITSAppUsesNonExemptEncryption</key>
+	<false/>
 </dict>
 </plist>

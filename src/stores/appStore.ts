@@ -10,6 +10,16 @@ export interface UserProfile {
   title: string;
   email: string;
   gender: string;
+  enableMonthlyTargets?: boolean;
+  targetMonthlyIncome?: number;
+  targetMonthlyShifts?: number;
+  specialty?: string;
+  subspecialty?: string;
+  phone?: string;
+  workplace?: string;
+  licenseNumber?: string;
+  graduationYear?: string;
+  bio?: string;
   fcmToken?: string;
   avatar?: string;
   updatedAt?: string;
@@ -64,7 +74,7 @@ interface AppState {
 
   // Data management
   importData: (data: AppState) => void;
-  syncData: () => Promise<void>;
+  syncData: (force?: boolean) => Promise<void>;
   fetchData: () => Promise<void>;
   setChartType: (type: "pie" | "bar" | "list" | "donut") => void;
   setNavIconStyle: (style: NavIconStyle) => void;
@@ -150,22 +160,28 @@ export const useAppStore = create<AppState>()(
           hasUnsyncedChanges: true,
         }));
 
-        const { data: { session } } = await supabase.auth.getSession();
-        if (session?.user) {
-          const stateProfile = get().userProfile;
-          const { error } = await supabase.from('profiles').upsert({
-            id: session.user.id,
-            name: stateProfile.name,
-            title: stateProfile.title,
-            email: stateProfile.email,
-            gender: stateProfile.gender,
-            fcm_token: stateProfile.fcmToken,
-            updated_at: now
-          });
-          
-          if (!error) {
-            set({ hasUnsyncedChanges: false });
+        try {
+          const { data: { session } } = await supabase.auth.getSession();
+          if (session?.user) {
+            const stateProfile = get().userProfile;
+            const { error } = await supabase.from('profiles').upsert({
+              id: session.user.id,
+              name: stateProfile.name,
+              title: stateProfile.title,
+              email: stateProfile.email,
+              gender: stateProfile.gender,
+              fcm_token: stateProfile.fcmToken,
+              updated_at: now,
+            });
+
+            if (!error) {
+              set({ hasUnsyncedChanges: false, lastSyncedAt: now });
+            } else {
+              console.error("Profile auto-sync error:", error);
+            }
           }
+        } catch (e) {
+          console.error("Auto-sync profile failed (will retry on next sync):", e);
         }
       },
 
@@ -838,9 +854,9 @@ export const useAppStore = create<AppState>()(
         });
       },
 
-      syncData: async () => {
-        // If no changes, don't waste bandwidth/CPU on startup
-        if (!get().hasUnsyncedChanges) {
+      syncData: async (force = false) => {
+        // If no changes and not forced, don't waste bandwidth/CPU
+        if (!get().hasUnsyncedChanges && !force) {
           console.log("No unsynced changes, skipping syncData heavy lifting.");
           return;
         }
@@ -861,6 +877,8 @@ export const useAppStore = create<AppState>()(
         console.log("Hospitals to sync:", state.hospitals.length);
         console.log("Shifts to sync:", state.shifts.length);
 
+        let hasSyncError = false;
+
         // 1. Upload Profiles
         const { error: profileError } = await supabase.from('profiles').upsert({
           id: userId,
@@ -871,7 +889,10 @@ export const useAppStore = create<AppState>()(
           fcm_token: state.userProfile.fcmToken,
           updated_at: new Date().toISOString(),
         });
-        if (profileError) console.error("Error syncing profile:", profileError);
+        if (profileError) {
+          console.error("Error syncing profile:", profileError);
+          hasSyncError = true;
+        }
 
         // 2. Upload/Sync Hospitals (BATCH)
         if (state.hospitals.length > 0) {
@@ -889,7 +910,10 @@ export const useAppStore = create<AppState>()(
             updated_at: h.updatedAt instanceof Date ? h.updatedAt.toISOString() : h.updatedAt,
           }));
           const { error } = await supabase.from('hospitals').upsert(hospitalsPayload);
-          if (error) console.error("Error batch syncing hospitals", error);
+          if (error) {
+            console.error("Error batch syncing hospitals", error);
+            hasSyncError = true;
+          }
         }
 
         // 3. Upload Shifts (BATCH)
@@ -920,11 +944,18 @@ export const useAppStore = create<AppState>()(
           for (let i = 0; i < shiftsPayload.length; i += chunkSize) {
             const chunk = shiftsPayload.slice(i, i + chunkSize);
             const { error } = await supabase.from('shifts').upsert(chunk);
-            if (error) console.error("Error batch syncing shifts chunk", error);
+            if (error) {
+              console.error("Error batch syncing shifts chunk", error);
+              hasSyncError = true;
+            }
           }
         }
-        console.log("syncData complete.");
-        set({ isSyncing: false, hasUnsyncedChanges: false, lastSyncedAt: new Date().toISOString() });
+        console.log("syncData complete. hasSyncError:", hasSyncError);
+        set({
+          isSyncing: false,
+          hasUnsyncedChanges: hasSyncError,
+          lastSyncedAt: hasSyncError ? get().lastSyncedAt : new Date().toISOString(),
+        });
       },
 
       fetchData: async () => {

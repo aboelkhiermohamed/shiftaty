@@ -37,9 +37,16 @@ export default function Shifts() {
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [filterMode, setFilterMode] = useState<"month" | "all">("month");
   const [searchQuery, setSearchQuery] = useState("");
+  const [displayLimit, setDisplayLimit] = useState(40);
 
-  const prevMonth = () => setCurrentMonth((m) => subMonths(m, 1));
-  const nextMonth = () => setCurrentMonth((m) => addMonths(m, 1));
+  const prevMonth = () => {
+    setCurrentMonth((m) => subMonths(m, 1));
+    setDisplayLimit(40);
+  };
+  const nextMonth = () => {
+    setCurrentMonth((m) => addMonths(m, 1));
+    setDisplayLimit(40);
+  };
 
   // Filter shifts based on mode (month vs all) and search query
   const filteredShifts = useMemo(() => {
@@ -124,7 +131,10 @@ export default function Shifts() {
           {/* Mode Switch Tabs */}
           <div className="flex items-center bg-secondary/80 p-1 rounded-xl self-start">
             <button
-              onClick={() => setFilterMode("month")}
+              onClick={() => {
+                setFilterMode("month");
+                setDisplayLimit(40);
+              }}
               className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
                 filterMode === "month"
                   ? "bg-card text-foreground shadow-sm"
@@ -134,7 +144,10 @@ export default function Shifts() {
               By Month
             </button>
             <button
-              onClick={() => setFilterMode("all")}
+              onClick={() => {
+                setFilterMode("all");
+                setDisplayLimit(40);
+              }}
               className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
                 filterMode === "all"
                   ? "bg-card text-foreground shadow-sm"
@@ -173,7 +186,10 @@ export default function Shifts() {
           <Input
             placeholder="Search shifts by hospital or notes..."
             value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
+            onChange={(e) => {
+              setSearchQuery(e.target.value);
+              setDisplayLimit(40);
+            }}
             className="pl-10 h-11 bg-card rounded-xl border-border"
           />
           {searchQuery && (
@@ -238,19 +254,33 @@ export default function Shifts() {
               </Button>
             </div>
           ) : (
-            <AnimatePresence mode="popLayout" initial={false}>
-              {filteredShifts.map((shift) => {
-                const hospital = hospitals.find((h) => h.id === shift.hospitalId);
-                return (
-                  <TelegramVanishWrapper
-                    key={shift.id}
-                    hospitalColor={hospital?.color}
+            <>
+              <AnimatePresence mode="popLayout" initial={false}>
+                {filteredShifts.slice(0, displayLimit).map((shift) => {
+                  const hospital = hospitals.find((h) => h.id === shift.hospitalId);
+                  return (
+                    <TelegramVanishWrapper
+                      key={shift.id}
+                      hospitalColor={hospital?.color}
+                    >
+                      <ShiftCard shift={shift} delay={0} />
+                    </TelegramVanishWrapper>
+                  );
+                })}
+              </AnimatePresence>
+
+              {filteredShifts.length > displayLimit && (
+                <div className="pt-2 pb-4 text-center">
+                  <Button
+                    variant="outline"
+                    onClick={() => setDisplayLimit((prev) => prev + 40)}
+                    className="rounded-xl px-5 text-xs font-semibold touch-feedback bg-card shadow-sm border-border"
                   >
-                    <ShiftCard shift={shift} delay={0} />
-                  </TelegramVanishWrapper>
-                );
-              })}
-            </AnimatePresence>
+                    Show More ({filteredShifts.length - displayLimit} remaining)
+                  </Button>
+                </div>
+              )}
+            </>
           )}
         </div>
       </div>

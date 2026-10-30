@@ -1,3 +1,4 @@
+import { memo } from "react";
 import { motion } from "framer-motion";
 import { cn } from "@/lib/utils";
 import { LucideIcon } from "lucide-react";
@@ -31,7 +32,7 @@ const variantStyles = {
   },
 };
 
-export function StatCard({
+export const StatCard = memo(function StatCard({
   title,
   value,
   subtitle,
@@ -44,10 +45,9 @@ export function StatCard({
 
   return (
     <motion.div
-      initial={{ opacity: 0, y: 10 }}
+      initial={{ opacity: 0, y: 8 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.2, ease: "easeOut" }}
-      style={{ willChange: "transform, opacity" }}
+      transition={{ duration: 0.15, ease: "easeOut" }}
       className={cn(
         "rounded-2xl p-3.5 sm:p-4 shadow-sm border",
         styles.container,
@@ -76,4 +76,4 @@ export function StatCard({
       </div>
     </motion.div>
   );
-}
+});

@@ -74,11 +74,12 @@ export function HospitalPickerSheet({
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent
         side="bottom"
+        hideCloseButton
         className="max-h-[85vh] h-[80vh] sm:max-w-lg mx-auto rounded-t-[1.75rem] p-0 flex flex-col bg-background/95 backdrop-blur-2xl border-t border-border shadow-2xl"
       >
         {/* Small Drag Handle */}
         <div className="pt-3 pb-1 flex justify-center">
-          <div className="w-12 h-1.5 rounded-full bg-muted-foreground/25" />
+          <div className="w-12 h-1.5 rounded-full bg-muted-foreground/25 cursor-grab active:cursor-grabbing" />
         </div>
 
         {/* Header */}
@@ -92,8 +93,10 @@ export function HospitalPickerSheet({
             </p>
           </div>
           <button
+            type="button"
             onClick={() => onOpenChange(false)}
-            className="w-8 h-8 rounded-full bg-secondary/80 hover:bg-secondary flex items-center justify-center text-muted-foreground transition-colors"
+            aria-label="Close"
+            className="w-8 h-8 rounded-full bg-secondary/80 hover:bg-secondary active:scale-95 flex items-center justify-center text-muted-foreground transition-all touch-feedback shadow-sm"
           >
             <X className="w-4 h-4" />
           </button>

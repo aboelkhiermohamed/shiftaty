@@ -1,6 +1,7 @@
+import { memo } from "react";
 import { motion } from "framer-motion";
 import { cn } from "@/lib/utils";
-import { Wallet, TrendingUp, Eye, EyeOff } from "lucide-react";
+import { Wallet, Eye, EyeOff } from "lucide-react";
 
 interface FeaturedStatCardProps {
     title: string;
@@ -12,7 +13,7 @@ interface FeaturedStatCardProps {
     onTogglePrivacy?: () => void;
 }
 
-export function FeaturedStatCard({
+export const FeaturedStatCard = memo(function FeaturedStatCard({
     title,
     value,
     subtitle,
@@ -23,10 +24,9 @@ export function FeaturedStatCard({
 }: FeaturedStatCardProps) {
     return (
         <motion.div
-            initial={{ opacity: 0, y: 10 }}
+            initial={{ opacity: 0, y: 8 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.2, ease: "easeOut" }}
-            style={{ willChange: "transform, opacity" }}
+            transition={{ duration: 0.15, ease: "easeOut" }}
             className={cn(
                 "relative col-span-2 overflow-hidden rounded-2xl p-5 text-white shadow-md",
                 "bg-gradient-to-br from-blue-500 via-blue-400 to-emerald-400",
@@ -71,4 +71,4 @@ export function FeaturedStatCard({
             </div>
         </motion.div>
     );
-}
+});

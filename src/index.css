@@ -152,6 +152,16 @@
   body {
     @apply bg-background text-foreground font-sans antialiased;
     font-family: 'Plus Jakarta Sans', sans-serif;
+    -webkit-tap-highlight-color: transparent;
+    -webkit-touch-callout: none;
+    user-select: none;
+    -webkit-user-select: none;
+    overscroll-behavior-y: none;
+  }
+
+  input, textarea, [contenteditable="true"] {
+    user-select: text;
+    -webkit-user-select: text;
   }
 
   /* Hide scrollbar for Chrome, Safari and Opera */
@@ -182,9 +192,9 @@
     background-clip: text;
   }
 
-  /* Card hover effect */
+  /* Card hover effect - GPU-friendly, no layout shift */
   .card-hover {
-    @apply transition-all duration-300 hover:shadow-lg hover:-translate-y-0.5;
+    @apply transition-[opacity,shadow] duration-200 hover:shadow-lg;
   }
 
   /* Stat card gradient backgrounds */
@@ -204,9 +214,24 @@
     background: linear-gradient(135deg, hsl(var(--accent)), hsl(180 60% 50%));
   }
 
-  /* Bottom nav safe area */
+  /* iOS Safe Area Utilities */
+  .pt-safe {
+    padding-top: env(safe-area-inset-top, 0px);
+  }
+  .pb-safe {
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+  .safe-top {
+    padding-top: env(safe-area-inset-top, 0px);
+  }
   .safe-bottom {
-    padding-bottom: env(safe-area-inset-bottom, 1rem);
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+  .mt-safe {
+    margin-top: env(safe-area-inset-top, 0px);
+  }
+  .mb-safe {
+    margin-bottom: env(safe-area-inset-bottom, 0px);
   }
 
   /* Safe area utilities */
@@ -227,15 +252,15 @@
 @layer utilities {
   /* Animation utilities */
   .animate-fade-in {
-    animation: fadeIn 0.3s ease-out forwards;
+    animation: fadeIn 0.2s ease-out forwards;
   }
 
   .animate-slide-up {
-    animation: slideUp 0.4s ease-out forwards;
+    animation: slideUp 0.25s ease-out forwards;
   }
 
   .animate-scale-in {
-    animation: scaleIn 0.3s ease-out forwards;
+    animation: scaleIn 0.18s ease-out forwards;
   }
 
   @keyframes fadeIn {
@@ -267,14 +292,42 @@
 
   /* Staggered children animation */
   .stagger-children > * {
-    animation: slideUp 0.4s ease-out forwards;
+    animation: slideUp 0.25s ease-out forwards;
     opacity: 0;
   }
 
-  .stagger-children > *:nth-child(1) { animation-delay: 0.05s; }
-  .stagger-children > *:nth-child(2) { animation-delay: 0.1s; }
-  .stagger-children > *:nth-child(3) { animation-delay: 0.15s; }
-  .stagger-children > *:nth-child(4) { animation-delay: 0.2s; }
-  .stagger-children > *:nth-child(5) { animation-delay: 0.25s; }
-  .stagger-children > *:nth-child(6) { animation-delay: 0.3s; }
+  .stagger-children > *:nth-child(1) { animation-delay: 0.03s; }
+  .stagger-children > *:nth-child(2) { animation-delay: 0.06s; }
+  .stagger-children > *:nth-child(3) { animation-delay: 0.09s; }
+  .stagger-children > *:nth-child(4) { animation-delay: 0.12s; }
+  .stagger-children > *:nth-child(5) { animation-delay: 0.15s; }
+  .stagger-children > *:nth-child(6) { animation-delay: 0.18s; }
+
+  /* GPU-composited scrolling performance */
+  .scroll-container {
+    -webkit-overflow-scrolling: touch;
+    will-change: scroll-position;
+    contain: layout style;
+  }
+
+  /* Respect reduced-motion for accessibility */
+  @media (prefers-reduced-motion: reduce) {
+    .animate-fade-in,
+    .animate-slide-up,
+    .animate-scale-in {
+      animation: none;
+      opacity: 1;
+      transform: none;
+    }
+
+    .stagger-children > * {
+      animation: none;
+      opacity: 1;
+    }
+
+    .touch-feedback {
+      @apply active:opacity-80;
+      transition: opacity 80ms ease;
+    }
+  }
 }

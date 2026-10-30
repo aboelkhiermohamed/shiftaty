@@ -2,7 +2,7 @@
 class SoundEngine {
   private ctx: AudioContext | null = null;
 
-  private init() {
+  public init() {
     if (!this.ctx) {
       this.ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
     }
@@ -80,3 +80,16 @@ class SoundEngine {
 }
 
 export const sounds = new SoundEngine();
+
+// Ensure AudioContext is warm and un-suspended on iOS WebKit after first user gesture
+if (typeof window !== "undefined") {
+  const unlockAudio = () => {
+    sounds.init();
+    window.removeEventListener("touchstart", unlockAudio);
+    window.removeEventListener("touchend", unlockAudio);
+    window.removeEventListener("click", unlockAudio);
+  };
+  window.addEventListener("touchstart", unlockAudio, { passive: true, once: true });
+  window.addEventListener("touchend", unlockAudio, { passive: true, once: true });
+  window.addEventListener("click", unlockAudio, { passive: true, once: true });
+}

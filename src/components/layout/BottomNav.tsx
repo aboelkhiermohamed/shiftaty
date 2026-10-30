@@ -62,7 +62,7 @@ export function BottomNav() {
         {/* 1. Home */}
         <Link
           to="/"
-          onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
+          onClick={() => window.scrollTo({ top: 0 })}
           className={cn(
             "relative flex flex-col items-center justify-center h-full py-1.5 touch-feedback transition-colors group",
             isHomeActive
@@ -73,7 +73,7 @@ export function BottomNav() {
           <div className="relative flex items-center justify-center">
             <HomeIcon
               className={cn(
-                "h-5 w-5 transition-transform duration-200",
+                "h-5 w-5 transition-transform duration-150",
                 isHomeActive
                   ? "scale-110 drop-shadow-[0_0_10px_rgba(59,130,246,0.5)]"
                   : "group-hover:scale-105"
@@ -81,9 +81,9 @@ export function BottomNav() {
             />
             {isHomeActive && (
               <motion.div
-                layoutId="nav-dot"
+                layoutId="nav-dot-home"
                 className="absolute -bottom-1.5 w-1 h-1 rounded-full bg-primary dark:bg-[#60a5fa]"
-                transition={{ type: "spring", stiffness: 450, damping: 30 }}
+                transition={{ type: "spring", stiffness: 380, damping: 28 }}
               />
             )}
           </div>
@@ -102,7 +102,7 @@ export function BottomNav() {
         {/* 2. Shifts */}
         <Link
           to="/shifts"
-          onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
+          onClick={() => window.scrollTo({ top: 0 })}
           className={cn(
             "relative flex flex-col items-center justify-center h-full py-1.5 touch-feedback transition-colors group",
             isShiftsActive
@@ -113,7 +113,7 @@ export function BottomNav() {
           <div className="relative flex items-center justify-center">
             <ShiftsIcon
               className={cn(
-                "h-5 w-5 transition-transform duration-200",
+                "h-5 w-5 transition-transform duration-150",
                 isShiftsActive
                   ? "scale-110 drop-shadow-[0_0_10px_rgba(59,130,246,0.5)]"
                   : "group-hover:scale-105"
@@ -121,9 +121,9 @@ export function BottomNav() {
             />
             {isShiftsActive && (
               <motion.div
-                layoutId="nav-dot"
+                layoutId="nav-dot-shifts"
                 className="absolute -bottom-1.5 w-1 h-1 rounded-full bg-primary dark:bg-[#60a5fa]"
-                transition={{ type: "spring", stiffness: 450, damping: 30 }}
+                transition={{ type: "spring", stiffness: 380, damping: 28 }}
               />
             )}
           </div>
@@ -170,7 +170,7 @@ export function BottomNav() {
         {/* 4. Hospitals */}
         <Link
           to="/hospitals"
-          onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
+          onClick={() => window.scrollTo({ top: 0 })}
           className={cn(
             "relative flex flex-col items-center justify-center h-full py-1.5 touch-feedback transition-colors group",
             isHospitalsActive
@@ -181,7 +181,7 @@ export function BottomNav() {
           <div className="relative flex items-center justify-center">
             <HospitalsIcon
               className={cn(
-                "h-5 w-5 transition-transform duration-200",
+                "h-5 w-5 transition-transform duration-150",
                 isHospitalsActive
                   ? "scale-110 drop-shadow-[0_0_10px_rgba(59,130,246,0.5)]"
                   : "group-hover:scale-105"
@@ -189,9 +189,9 @@ export function BottomNav() {
             />
             {isHospitalsActive && (
               <motion.div
-                layoutId="nav-dot"
+                layoutId="nav-dot-hospitals"
                 className="absolute -bottom-1.5 w-1 h-1 rounded-full bg-primary dark:bg-[#60a5fa]"
-                transition={{ type: "spring", stiffness: 450, damping: 30 }}
+                transition={{ type: "spring", stiffness: 380, damping: 28 }}
               />
             )}
           </div>
@@ -210,7 +210,7 @@ export function BottomNav() {
         {/* 5. Reports */}
         <Link
           to="/reports"
-          onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
+          onClick={() => window.scrollTo({ top: 0 })}
           className={cn(
             "relative flex flex-col items-center justify-center h-full py-1.5 touch-feedback transition-colors group",
             isReportsActive
@@ -221,7 +221,7 @@ export function BottomNav() {
           <div className="relative flex items-center justify-center">
             <ReportsIcon
               className={cn(
-                "h-5 w-5 transition-transform duration-200",
+                "h-5 w-5 transition-transform duration-150",
                 isReportsActive
                   ? "scale-110 drop-shadow-[0_0_10px_rgba(59,130,246,0.5)]"
                   : "group-hover:scale-105"
@@ -229,9 +229,9 @@ export function BottomNav() {
             />
             {isReportsActive && (
               <motion.div
-                layoutId="nav-dot"
+                layoutId="nav-dot-reports"
                 className="absolute -bottom-1.5 w-1 h-1 rounded-full bg-primary dark:bg-[#60a5fa]"
-                transition={{ type: "spring", stiffness: 450, damping: 30 }}
+                transition={{ type: "spring", stiffness: 380, damping: 28 }}
               />
             )}
           </div>

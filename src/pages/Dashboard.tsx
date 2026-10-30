@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { format, startOfMonth, endOfMonth, subMonths, addMonths } from "date-fns";
-import { ChevronLeft, ChevronRight, Wallet, Calendar, Users, Clock, Cloud, User, Menu } from "lucide-react";
+import { ChevronLeft, ChevronRight, Wallet, Calendar, Users, Clock, Cloud, User, Menu, Target } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useNavigate } from "react-router-dom";
 import { AppLayout } from "@/components/layout/AppLayout";
@@ -12,8 +12,11 @@ import { TelegramVanishWrapper } from "@/components/shifts/TelegramVanishWrapper
 import { IncomeBreakdown } from "@/components/dashboard/IncomeBreakdown";
 import { useAppStore } from "@/stores/appStore";
 import { calculateFixedSalariesForShifts } from "@/lib/hospitalUtils";
+import { useToast } from "@/hooks/use-toast";
+import { sounds } from "@/lib/sound";
 
 export default function Dashboard() {
+  const { toast } = useToast();
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const shifts = useAppStore((state) => state.shifts);
   const hospitals = useAppStore((state) => state.hospitals);
@@ -141,9 +144,24 @@ export default function Dashboard() {
           </div>
 
           <button 
-            onClick={(e) => {
+            onClick={async (e) => {
               e.stopPropagation();
-              if (!isSyncing) syncData();
+              if (isSyncing) return;
+              try {
+                await syncData(true);
+                sounds.playSuccess();
+                toast({
+                  title: "تمت المزامنة بنجاح",
+                  description: "تم تحديث ومزامنة بياناتك مع السحابة بنجاح.",
+                });
+              } catch (err) {
+                console.error("Sync error:", err);
+                toast({
+                  title: "فشلت المزامنة",
+                  description: "تعذر الاتصال بالسحابة، يرجى المحاولة لاحقاً.",
+                  variant: "destructive",
+                });
+              }
             }}
             disabled={isSyncing}
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-100/80 dark:bg-[#1C1C1E] border border-slate-200/60 dark:border-white/5 hover:bg-slate-200/60 dark:hover:bg-white/10 active:scale-95 transition-all outline-none"
@@ -190,6 +208,100 @@ export default function Dashboard() {
             variant="warning"
           />
         </div>
+
+        {/* Monthly Target Progress Card (Shown only when enabled by user in Profile) */}
+        {userProfile?.enableMonthlyTargets && (userProfile?.targetMonthlyIncome || userProfile?.targetMonthlyShifts) ? (
+          <div className="bg-gradient-to-br from-emerald-500/10 via-emerald-500/5 to-transparent border border-emerald-500/25 rounded-2xl p-4 shadow-sm space-y-3">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <div className="w-7 h-7 rounded-lg bg-emerald-500/15 flex items-center justify-center text-emerald-600 dark:text-emerald-400">
+                  <Target className="w-4 h-4" />
+                </div>
+                <div>
+                  <h3 className="text-xs font-bold text-foreground">
+                    Monthly Goal (هدف الشهر)
+                  </h3>
+                  <span className="text-[10px] text-muted-foreground block -mt-0.5">
+                    {format(currentMonth, "MMMM yyyy")}
+                  </span>
+                </div>
+              </div>
+
+              <button
+                onClick={() => navigate("/profile")}
+                className="text-[11px] font-semibold text-emerald-600 dark:text-emerald-400 hover:underline flex items-center gap-0.5 active:scale-95 transition-transform"
+              >
+                <span>Edit Goal</span>
+                <ChevronRight className="w-3.5 h-3.5" />
+              </button>
+            </div>
+
+            {/* Income Target Progress */}
+            {userProfile?.targetMonthlyIncome ? (
+              <div className="space-y-1.5">
+                <div className="flex items-center justify-between text-xs">
+                  <span className="font-semibold text-foreground/80">
+                    Earnings Target
+                  </span>
+                  <span className="font-bold text-emerald-600 dark:text-emerald-400">
+                    {isPrivacyMode ? "***" : `${monthlyStats.totalIncome.toLocaleString()} / ${userProfile.targetMonthlyIncome.toLocaleString()} EGP`}
+                    {" "}
+                    ({Math.min(100, Math.round((monthlyStats.totalIncome / userProfile.targetMonthlyIncome) * 100))}%)
+                  </span>
+                </div>
+                <div className="w-full h-2 rounded-full bg-secondary/80 overflow-hidden">
+                  <div
+                    className={cn(
+                      "h-full rounded-full transition-all duration-500",
+                      monthlyStats.totalIncome >= userProfile.targetMonthlyIncome
+                        ? "bg-emerald-500 shadow-[0_0_10px_rgba(16,185,129,0.5)]"
+                        : "bg-gradient-to-r from-blue-500 to-emerald-500"
+                    )}
+                    style={{
+                      width: `${Math.min(100, Math.max(0, Math.round((monthlyStats.totalIncome / userProfile.targetMonthlyIncome) * 100)))}%`
+                    }}
+                  />
+                </div>
+                <div className="flex items-center justify-between text-[11px] text-muted-foreground">
+                  <span>
+                    {monthlyStats.totalIncome >= userProfile.targetMonthlyIncome
+                      ? "🎉 Target reached!"
+                      : `Remaining: ${(userProfile.targetMonthlyIncome - monthlyStats.totalIncome > 0 ? userProfile.targetMonthlyIncome - monthlyStats.totalIncome : 0).toLocaleString()} EGP`}
+                  </span>
+                </div>
+              </div>
+            ) : null}
+
+            {/* Shifts Target Progress */}
+            {userProfile?.targetMonthlyShifts ? (
+              <div className="space-y-1.5 pt-1 border-t border-border/40">
+                <div className="flex items-center justify-between text-xs">
+                  <span className="font-semibold text-foreground/80">
+                    Shifts Target
+                  </span>
+                  <span className="font-bold text-primary">
+                    {monthlyStats.totalShifts} / {userProfile.targetMonthlyShifts} shifts
+                    {" "}
+                    ({Math.min(100, Math.round((monthlyStats.totalShifts / userProfile.targetMonthlyShifts) * 100))}%)
+                  </span>
+                </div>
+                <div className="w-full h-2 rounded-full bg-secondary/80 overflow-hidden">
+                  <div
+                    className={cn(
+                      "h-full rounded-full transition-all duration-500",
+                      monthlyStats.totalShifts >= userProfile.targetMonthlyShifts
+                        ? "bg-primary shadow-[0_0_10px_rgba(59,130,246,0.5)]"
+                        : "bg-gradient-to-r from-blue-400 to-primary"
+                    )}
+                    style={{
+                      width: `${Math.min(100, Math.max(0, Math.round((monthlyStats.totalShifts / userProfile.targetMonthlyShifts) * 100)))}%`
+                    }}
+                  />
+                </div>
+              </div>
+            ) : null}
+          </div>
+        ) : null}
 
         {/* Income Breakdown */}
         <div>

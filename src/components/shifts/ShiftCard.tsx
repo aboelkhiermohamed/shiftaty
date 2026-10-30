@@ -1,4 +1,4 @@
-import { memo } from "react";
+import { memo, useCallback, useMemo } from "react";
 import { motion } from "framer-motion";
 import { format } from "date-fns";
 import { Clock, Calendar, MoreHorizontal, ChevronRight, Stethoscope, Trash2, Building2, Copy } from "lucide-react";
@@ -29,16 +29,9 @@ interface ShiftCardProps {
   delay?: number;
 }
 
-export const ShiftCard = memo(({ shift, onClick, delay = 0 }: ShiftCardProps) => {
-  const hospitals = useAppStore((state) => state.hospitals);
-  const deleteShift = useAppStore((state) => state.deleteShift);
-  const hospital = hospitals.find((h) => h.id === shift.hospitalId);
-  const navigate = useNavigate();
-  const { toast } = useToast();
-  const addShift = useAppStore((state) => state.addShift);
-  const isPrivacyMode = useAppStore((state) => state.isPrivacyMode);
-  
-  let cleanNotes = shift.notes ?? "";
+/** Parse all metadata embedded in shift.notes — pure fn so React can memoize */
+function parseShiftNotes(notes: string | undefined | null) {
+  let cleanNotes = notes ?? "";
   let multiplier: number | null = null;
   let multiplierType: 'total' | 'base' = 'total';
   let isCustomFixed = false;
@@ -47,15 +40,15 @@ export const ShiftCard = memo(({ shift, onClick, delay = 0 }: ShiftCardProps) =>
   let snapshotHospitalColor = "";
   let isNabatya = false;
 
-  if (shift.notes) {
+  if (notes) {
     // Parse snapshot hospital name
-    const matchName = shift.notes.match(/\[HospitalName:\s*([^\]]+)\s*\]/i);
+    const matchName = notes.match(/\[HospitalName:\s*([^\]]+)\s*\]/i);
     if (matchName) {
       snapshotHospitalName = matchName[1].trim();
       cleanNotes = cleanNotes.replace(/\s*\[HospitalName:\s*[^\]]+\s*\]/gi, "").trim();
     }
     // Parse snapshot hospital color
-    const matchColor = shift.notes.match(/\[HospitalColor:\s*([^\]]+)\s*\]/i);
+    const matchColor = notes.match(/\[HospitalColor:\s*([^\]]+)\s*\]/i);
     if (matchColor) {
       snapshotHospitalColor = matchColor[1].trim();
       cleanNotes = cleanNotes.replace(/\s*\[HospitalColor:\s*[^\]]+\s*\]/gi, "").trim();
@@ -65,13 +58,13 @@ export const ShiftCard = memo(({ shift, onClick, delay = 0 }: ShiftCardProps) =>
     cleanNotes = cleanNotes.replace(/\s*\[StoredFixedRate:\s*[^\]]+\s*\]/gi, "").trim();
     cleanNotes = cleanNotes.replace(/\s*\[StoredPaymentModel:\s*[^\]]+\s*\]/gi, "").trim();
 
-    if (shift.notes.includes("[Nabatya: true]")) {
+    if (notes.includes("[Nabatya: true]")) {
       isNabatya = true;
       cleanNotes = cleanNotes.replace(/\s*\[Nabatya:\s*true\s*\]/gi, "").trim();
     }
 
-    const matchMult = shift.notes.match(/\[Multiplier:\s*([0-9.]+)\s*x\s*\((Total|Base)\)\]/i);
-    const matchFixed = shift.notes.match(/\[CustomFixed:\s*([0-9.]+)\s*\]/i);
+    const matchMult = notes.match(/\[Multiplier:\s*([0-9.]+)\s*x\s*\((Total|Base)\)\]/i);
+    const matchFixed = notes.match(/\[CustomFixed:\s*([0-9.]+)\s*\]/i);
     
     if (matchMult) {
       multiplier = parseFloat(matchMult[1]);
@@ -84,27 +77,60 @@ export const ShiftCard = memo(({ shift, onClick, delay = 0 }: ShiftCardProps) =>
     }
   }
 
-  const handleDelete = async () => {
+  return { cleanNotes, multiplier, multiplierType, isCustomFixed, customFixedAmount, snapshotHospitalName, snapshotHospitalColor, isNabatya };
+}
+
+export const ShiftCard = memo(({ shift, onClick, delay = 0 }: ShiftCardProps) => {
+  // Stable selector — only re-renders when THIS hospital changes
+  const hospital = useAppStore(
+    useCallback((state) => state.hospitals.find((h) => h.id === shift.hospitalId), [shift.hospitalId])
+  );
+  const deleteShift = useAppStore((state) => state.deleteShift);
+  const addShift = useAppStore((state) => state.addShift);
+  const isPrivacyMode = useAppStore((state) => state.isPrivacyMode);
+  const navigate = useNavigate();
+  const { toast } = useToast();
+
+  // Memoize expensive regex parsing — only recomputes when notes changes
+  const parsed = useMemo(() => parseShiftNotes(shift.notes), [shift.notes]);
+  const { cleanNotes, multiplier, multiplierType, isCustomFixed, snapshotHospitalName, snapshotHospitalColor, isNabatya } = parsed;
+
+  // Memoize duration — only recomputes when times change
+  const duration = useMemo(() => {
+    const [sh, sm] = shift.startTime.split(":").map(Number);
+    const [eh, em] = shift.endTime.split(":").map(Number);
+    let mins = (eh * 60 + em) - (sh * 60 + sm);
+    if (mins <= 0) mins += 24 * 60;
+    return Math.round((mins / 60) * 10) / 10;
+  }, [shift.startTime, shift.endTime]);
+
+  const hospitalColor = useMemo(() => getHospitalColor({
+    color: hospital?.color || snapshotHospitalColor,
+    name: hospital?.name || snapshotHospitalName,
+    id: shift.hospitalId,
+  }), [hospital?.color, hospital?.name, snapshotHospitalColor, snapshotHospitalName, shift.hospitalId]);
+
+  const handleDelete = useCallback(async () => {
     try {
       await deleteShift(shift.id);
       sounds.playDelete();
     } catch (e) {
       console.error(e);
-      alert("Failed to delete shift online. Try again later.");
+      alert("Failed to delete shift. Try again later.");
     }
-  };
+  }, [deleteShift, shift.id]);
 
-  const handleEditNavigate = (e: React.MouseEvent) => {
+  const handleEditNavigate = useCallback((e: React.MouseEvent) => {
     e.stopPropagation();
     navigate(`/edit-shift/${shift.id}`);
-  };
+  }, [navigate, shift.id]);
 
-  const handleDuplicate = async (e: React.MouseEvent) => {
+  const handleDuplicate = useCallback(async (e: React.MouseEvent) => {
     e.stopPropagation();
     try {
       await addShift({
         hospitalId: shift.hospitalId,
-        date: new Date(), // duplicate creates a shift for today
+        date: new Date(),
         startTime: shift.startTime,
         endTime: shift.endTime,
         casesCount: shift.casesCount,
@@ -115,35 +141,12 @@ export const ShiftCard = memo(({ shift, onClick, delay = 0 }: ShiftCardProps) =>
         itemCounts: shift.itemCounts,
       });
       sounds.playSuccess();
-      toast({
-        title: "Shift Duplicated",
-        description: "A copy of this shift has been logged for today.",
-      });
+      toast({ title: "Shift Duplicated", description: "A copy of this shift has been logged for today." });
     } catch (err) {
       console.error(err);
-      toast({
-        title: "Error",
-        description: "Failed to duplicate shift.",
-        variant: "destructive",
-      });
+      toast({ title: "Error", description: "Failed to duplicate shift.", variant: "destructive" });
     }
-  };
-
-  // Calculate duration in hours
-  const calculateDuration = () => {
-    const [sh, sm] = shift.startTime.split(":").map(Number);
-    const [eh, em] = shift.endTime.split(":").map(Number);
-    let mins = (eh * 60 + em) - (sh * 60 + sm);
-    if (mins <= 0) mins += 24 * 60;
-    return Math.round((mins / 60) * 10) / 10;
-  };
-
-  const duration = calculateDuration();
-  const hospitalColor = getHospitalColor({
-    color: hospital?.color || snapshotHospitalColor,
-    name: hospital?.name || snapshotHospitalName,
-    id: shift.hospitalId,
-  });
+  }, [addShift, shift, toast]);
 
   return (
     <motion.div

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Plus, Building2, Search } from "lucide-react";
 import { AppLayout } from "@/components/layout/AppLayout";
@@ -32,8 +32,9 @@ export default function Hospitals() {
   const deleteHospital = useAppStore((state) => state.deleteHospital);
   const { toast } = useToast();
 
-  const filteredHospitals = hospitals.filter((h) =>
-    h.name.toLowerCase().includes(searchQuery.toLowerCase().trim())
+  const filteredHospitals = useMemo(
+    () => hospitals.filter((h) => h.name.toLowerCase().includes(searchQuery.toLowerCase().trim())),
+    [hospitals, searchQuery]
   );
 
   const confirmDelete = async () => {

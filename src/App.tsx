@@ -3,32 +3,51 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { ThemeProvider } from "@/components/theme-provider";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { HashRouter, Routes, Route, useNavigate, Navigate } from "react-router-dom"; // Changed to HashRouter
+import { HashRouter, Routes, Route, useNavigate, Navigate } from "react-router-dom";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, lazy, Suspense } from "react";
 import { supabase } from "@/lib/supabase";
+// Critical path pages — eagerly loaded
 import Dashboard from "./pages/Dashboard";
 import Shifts from "./pages/Shifts";
-import AddShift from "./pages/AddShift";
-import EditShift from "./pages/EditShift";
-import Hospitals from "./pages/Hospitals";
-import Reports from "./pages/Reports";
-import Settings from "./pages/Settings";
-import BackupSync from "./pages/BackupSync";
-import Profile from "./pages/Profile";
 import Login from "./pages/Login";
 import NotFound from "./pages/NotFound";
+// Heavy pages — lazy loaded (reduces initial bundle)
+const AddShift = lazy(() => import("./pages/AddShift"));
+const EditShift = lazy(() => import("./pages/EditShift"));
+const Hospitals = lazy(() => import("./pages/Hospitals"));
+const Reports = lazy(() => import("./pages/Reports"));
+const Settings = lazy(() => import("./pages/Settings"));
+const BackupSync = lazy(() => import("./pages/BackupSync"));
+const Profile = lazy(() => import("./pages/Profile"));
+
 import { Loader2 } from "lucide-react";
-import { App as CapacitorApp } from "@capacitor/app"; // Import Capacitor App
+import { App as CapacitorApp } from "@capacitor/app";
 import { LocalNotifications } from "@capacitor/local-notifications";
 import { useAppStore } from "@/stores/appStore";
 
-const queryClient = new QueryClient();
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      // Don't refetch on window focus for an offline-first app
+      refetchOnWindowFocus: false,
+      // Cache for 5 minutes
+      staleTime: 5 * 60 * 1000,
+      // Keep in cache for 10 minutes
+      gcTime: 10 * 60 * 1000,
+      retry: 1,
+    },
+  },
+});
 
-// Debug logging for Auth Redirect
-console.log("Current URL:", window.location.href);
-console.log("Current Hash:", window.location.hash);
-console.log("Current Search:", window.location.search);
+// Lightweight page loading fallback
+const PageLoader = () => (
+  <div className="flex items-center justify-center min-h-screen">
+    <Loader2 className="h-8 w-8 animate-spin text-primary" />
+  </div>
+);
+
+// Debug logging for Auth Redirect — production only shows in dev
 
 
 // Deep Link Handler Component
@@ -138,9 +157,11 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
         const store = useAppStore.getState();
         store.initPushNotifications();
 
-        // 1. Sync any local changes first (Push)
-        await store.syncData();
-        // 2. Then fetch latest data from cloud (Pull)
+        // 1. Sync pending local changes to cloud first if any
+        if (store.hasUnsyncedChanges && !store.isSyncing) {
+          await store.syncData();
+        }
+        // 2. Fetch latest data from cloud
         await store.fetchData();
       }
     };
@@ -187,7 +208,7 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
 import { AnnouncementDialog } from "@/components/AnnouncementDialog"; // Import it
 import { ForceUpdateDialog } from "@/components/ForceUpdateDialog";
 
-// ... (rest of imports)
+import { AndroidBackButtonHandler } from "@/hooks/useAndroidBackButton";
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
@@ -199,6 +220,7 @@ const App = () => (
         <AnnouncementDialog /> {/* Add the dialog here */}
         <HashRouter>
           <DeepLinkListener /> {/* Listen for deep links globally */}
+          <AndroidBackButtonHandler /> {/* Android hardware back button handler */}
           <Routes>
             <Route path="/login" element={<Login />} />
             <Route path="/auth/callback" element={<Navigate to="/" replace />} />
@@ -223,7 +245,9 @@ const App = () => (
               path="/add-shift"
               element={
                 <ProtectedRoute>
-                  <AddShift />
+                  <Suspense fallback={<PageLoader />}>
+                    <AddShift />
+                  </Suspense>
                 </ProtectedRoute>
               }
             />
@@ -231,7 +255,9 @@ const App = () => (
               path="/hospitals"
               element={
                 <ProtectedRoute>
-                  <Hospitals />
+                  <Suspense fallback={<PageLoader />}>
+                    <Hospitals />
+                  </Suspense>
                 </ProtectedRoute>
               }
             />
@@ -239,7 +265,9 @@ const App = () => (
               path="/reports"
               element={
                 <ProtectedRoute>
-                  <Reports />
+                  <Suspense fallback={<PageLoader />}>
+                    <Reports />
+                  </Suspense>
                 </ProtectedRoute>
               }
             />
@@ -247,7 +275,9 @@ const App = () => (
               path="/settings"
               element={
                 <ProtectedRoute>
-                  <Settings />
+                  <Suspense fallback={<PageLoader />}>
+                    <Settings />
+                  </Suspense>
                 </ProtectedRoute>
               }
             />
@@ -255,7 +285,9 @@ const App = () => (
               path="/backup-sync"
               element={
                 <ProtectedRoute>
-                  <BackupSync />
+                  <Suspense fallback={<PageLoader />}>
+                    <BackupSync />
+                  </Suspense>
                 </ProtectedRoute>
               }
             />
@@ -263,7 +295,9 @@ const App = () => (
               path="/edit-shift/:id"
               element={
                 <ProtectedRoute>
-                  <EditShift />
+                  <Suspense fallback={<PageLoader />}>
+                    <EditShift />
+                  </Suspense>
                 </ProtectedRoute>
               }
             />
@@ -271,7 +305,9 @@ const App = () => (
               path="/profile"
               element={
                 <ProtectedRoute>
-                  <Profile />
+                  <Suspense fallback={<PageLoader />}>
+                    <Profile />
+                  </Suspense>
                 </ProtectedRoute>
               }
             />
