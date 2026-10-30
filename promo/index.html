@@ -1,0 +1,1011 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Shiftaty v1.5.0 - Cinematic Promo</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800;900&family=Inter:wght@400;500;600;700;800;900&family=Amiri:wght@400;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --primary: #2F8CFF;
+      --primary-glow: rgba(47, 140, 255, 0.6);
+      --emerald: #10B981;
+      --dark-bg: #070A12;
+      --card-bg: rgba(13, 20, 36, 0.85);
+      --text-main: #FFFFFF;
+      --text-muted: #94A3B8;
+      --border-glass: rgba(255, 255, 255, 0.12);
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body {
+      width: 100%;
+      height: 100%;
+      background: #020408;
+      overflow: hidden;
+      font-family: 'Cairo', 'Inter', system-ui, sans-serif;
+      color: #FFF;
+      user-select: none;
+    }
+
+    /* Ambient Lighting */
+    .bg-glow-1 {
+      position: absolute;
+      width: 800px;
+      height: 800px;
+      border-radius: 50%;
+      background: radial-gradient(circle, rgba(47, 140, 255, 0.18) 0%, transparent 70%);
+      top: 10%;
+      left: 15%;
+      filter: blur(80px);
+      pointer-events: none;
+      animation: floatPulse 12s ease-in-out infinite alternate;
+    }
+    .bg-glow-2 {
+      position: absolute;
+      width: 700px;
+      height: 700px;
+      border-radius: 50%;
+      background: radial-gradient(circle, rgba(16, 185, 129, 0.12) 0%, transparent 70%);
+      bottom: 15%;
+      right: 15%;
+      filter: blur(90px);
+      pointer-events: none;
+      animation: floatPulse 14s ease-in-out infinite alternate-reverse;
+    }
+    @keyframes floatPulse {
+      0% { transform: scale(0.9) translate(-30px, -20px); opacity: 0.6; }
+      100% { transform: scale(1.15) translate(40px, 30px); opacity: 0.95; }
+    }
+
+    /* Studio Container */
+    #studio {
+      position: relative;
+      width: 100vw;
+      height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    /* 1080x1920 Stage (9:16 Vertical Video) */
+    #stage-container {
+      position: relative;
+      box-shadow: 0 0 100px rgba(0, 0, 0, 0.9), 0 0 40px rgba(47, 140, 255, 0.25);
+      border-radius: 20px;
+      overflow: hidden;
+    }
+
+    #stage {
+      position: absolute;
+      left: 0;
+      top: 0;
+      width: 1080px;
+      height: 1920px;
+      background: radial-gradient(1300px 1100px at 50% 30%, #0F172A, #080D1A 60%, #03060B 100%);
+      overflow: hidden;
+      transform-origin: 0 0;
+      direction: ltr; /* base layer coordinate math */
+    }
+
+    /* Subtle Animated Stage Grid */
+    #stage-grid {
+      position: absolute;
+      inset: 0;
+      background-image: 
+        linear-gradient(rgba(255, 255, 255, 0.03) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
+      background-size: 80px 80px;
+      mask-image: radial-gradient(circle at 50% 45%, black 40%, transparent 80%);
+      pointer-events: none;
+    }
+
+    /* Floating Spotlight Beam */
+    .spotlight-cone {
+      position: absolute;
+      top: -200px;
+      left: 50%;
+      width: 1200px;
+      height: 1800px;
+      transform: translateX(-50%);
+      background: radial-gradient(ellipse at top, rgba(47, 140, 255, 0.22) 0%, rgba(47, 140, 255, 0.04) 45%, transparent 75%);
+      pointer-events: none;
+      opacity: 0;
+      transition: opacity 1.2s ease;
+    }
+    .spotlight-cone.on { opacity: 1; }
+
+    /* Titles Layer */
+    #titles {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 380px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      z-index: 50;
+      padding: 0 60px;
+      pointer-events: none;
+    }
+    .title-en {
+      font-family: 'Inter', sans-serif;
+      font-size: 38px;
+      font-weight: 800;
+      letter-spacing: 5px;
+      text-transform: uppercase;
+      color: #93C5FD;
+      opacity: 0;
+      transform: translateY(20px);
+      transition: all 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+      text-shadow: 0 4px 20px rgba(47, 140, 255, 0.4);
+    }
+    .title-ar {
+      font-family: 'Cairo', sans-serif;
+      font-size: 68px;
+      font-weight: 900;
+      color: #FFFFFF;
+      margin-top: 6px;
+      opacity: 0;
+      transform: translateY(24px);
+      transition: all 0.6s cubic-bezier(0.16, 1, 0.3, 1) 0.08s;
+      text-shadow: 0 8px 32px rgba(0, 0, 0, 0.8);
+      background: linear-gradient(180deg, #FFFFFF 30%, #CFE2FF 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+    .title-sub {
+      font-family: 'Cairo', sans-serif;
+      font-size: 34px;
+      font-weight: 600;
+      color: #94A3B8;
+      margin-top: 10px;
+      opacity: 0;
+      transform: translateY(20px);
+      transition: all 0.6s cubic-bezier(0.16, 1, 0.3, 1) 0.16s;
+    }
+    .title-en.on, .title-ar.on, .title-sub.on {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    /* 2.5D World & Camera */
+    #world {
+      position: absolute;
+      inset: 0;
+      perspective: 2000px;
+      perspective-origin: 50% 52%;
+      z-index: 10;
+    }
+
+    #cam {
+      position: absolute;
+      inset: 0;
+      transform-style: preserve-3d;
+      transition: transform 1.2s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    /* Phone Rig */
+    .phone-rig {
+      position: absolute;
+      left: 50%;
+      top: 52%;
+      width: 580px;
+      height: 1180px;
+      margin-left: -290px;
+      margin-top: -550px;
+      transform-style: preserve-3d;
+      transition: all 0.9s cubic-bezier(0.16, 1, 0.3, 1);
+      opacity: 0;
+    }
+    .phone-rig.active {
+      opacity: 1;
+    }
+
+    /* Phone Shell (Titanium Border + Glass Sheen) */
+    .phone-shell {
+      position: absolute;
+      inset: 0;
+      border-radius: 64px;
+      background: #090E1A;
+      border: 14px solid #141B2D;
+      box-shadow: 
+        0 60px 140px rgba(0, 15, 45, 0.8),
+        0 20px 40px rgba(0, 0, 0, 0.9),
+        0 0 0 2px rgba(255, 255, 255, 0.14),
+        inset 0 0 0 3px rgba(0, 0, 0, 0.8);
+      overflow: hidden;
+      transform-style: preserve-3d;
+    }
+
+    /* Dynamic Island Notch */
+    .phone-notch {
+      position: absolute;
+      top: 18px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 140px;
+      height: 34px;
+      background: #000;
+      border-radius: 20px;
+      z-index: 40;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.5);
+    }
+
+    /* Screen Shot */
+    .phone-screen {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      transform-origin: 50% 50%;
+      transition: transform 1.4s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    /* Glass Gloss Sheen */
+    .phone-sheen {
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(135deg, rgba(255, 255, 255, 0.22) 0%, rgba(255, 255, 255, 0.05) 30%, transparent 50%);
+      pointer-events: none;
+      z-index: 30;
+    }
+
+    /* Pulse Highlight Ring */
+    .focus-ring {
+      position: absolute;
+      border-radius: 24px;
+      border: 4px solid var(--primary);
+      box-shadow: 0 0 30px var(--primary-glow), inset 0 0 20px rgba(47, 140, 255, 0.3);
+      opacity: 0;
+      transform: scale(0.92);
+      transition: all 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+      z-index: 25;
+      pointer-events: none;
+    }
+    .focus-ring.on {
+      opacity: 1;
+      transform: scale(1);
+      animation: ringGlow 1.8s infinite alternate;
+    }
+    @keyframes ringGlow {
+      0% { box-shadow: 0 0 20px var(--primary-glow), inset 0 0 10px rgba(47, 140, 255, 0.3); border-color: #2F8CFF; }
+      100% { box-shadow: 0 0 45px rgba(47, 140, 255, 0.9), inset 0 0 25px rgba(47, 140, 255, 0.5); border-color: #60A5FA; }
+    }
+
+    /* 3D Floating Feature Badges */
+    .floating-badge {
+      position: absolute;
+      background: rgba(15, 23, 42, 0.92);
+      backdrop-filter: blur(24px);
+      border: 2px solid rgba(255, 255, 255, 0.16);
+      border-radius: 28px;
+      padding: 18px 30px;
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      box-shadow: 0 25px 60px rgba(0, 0, 0, 0.7), 0 0 30px rgba(47, 140, 255, 0.25);
+      z-index: 35;
+      opacity: 0;
+      transform: translateZ(90px) scale(0.85);
+      transition: all 0.7s cubic-bezier(0.16, 1, 0.3, 1);
+      pointer-events: none;
+      direction: rtl;
+    }
+    .floating-badge.on {
+      opacity: 1;
+      transform: translateZ(90px) scale(1);
+    }
+    .floating-badge .badge-icon {
+      width: 52px;
+      height: 52px;
+      border-radius: 16px;
+      background: linear-gradient(135deg, #2F8CFF, #1D4ED8);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 26px;
+      box-shadow: 0 8px 20px rgba(47, 140, 255, 0.4);
+    }
+    .floating-badge.emerald .badge-icon {
+      background: linear-gradient(135deg, #10B981, #047857);
+      box-shadow: 0 8px 20px rgba(16, 185, 129, 0.4);
+    }
+    .badge-title {
+      font-size: 24px;
+      font-weight: 800;
+      color: #FFF;
+      line-height: 1.2;
+    }
+    .badge-sub {
+      font-size: 19px;
+      color: #94A3B8;
+      font-weight: 600;
+    }
+
+    /* Intro Overlay */
+    #intro-screen {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      z-index: 80;
+      background: radial-gradient(circle at center, #0F172A 0%, #03060B 80%);
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.8s ease;
+    }
+    #intro-screen.on {
+      opacity: 1;
+      pointer-events: auto;
+    }
+    .logo-hero {
+      width: 240px;
+      height: 240px;
+      border-radius: 54px;
+      box-shadow: 0 30px 90px rgba(47, 140, 255, 0.5), 0 0 0 4px rgba(255, 255, 255, 0.2);
+      transform: scale(0.8) translateY(30px);
+      opacity: 0;
+      transition: all 0.9s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    #intro-screen.on .logo-hero {
+      transform: scale(1) translateY(0);
+      opacity: 1;
+    }
+    .intro-title {
+      font-size: 88px;
+      font-weight: 900;
+      margin-top: 36px;
+      background: linear-gradient(180deg, #FFFFFF, #93C5FD);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      letter-spacing: -1px;
+      text-shadow: 0 10px 40px rgba(47, 140, 255, 0.4);
+      opacity: 0;
+      transform: translateY(20px);
+      transition: all 0.8s ease 0.2s;
+    }
+    .intro-sub {
+      font-size: 34px;
+      font-weight: 700;
+      color: #38BDF8;
+      margin-top: 12px;
+      opacity: 0;
+      transform: translateY(20px);
+      transition: all 0.8s ease 0.35s;
+    }
+    .intro-tag {
+      font-size: 26px;
+      font-weight: 600;
+      color: #94A3B8;
+      margin-top: 24px;
+      background: rgba(255, 255, 255, 0.06);
+      padding: 10px 30px;
+      border-radius: 30px;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      opacity: 0;
+      transition: all 0.8s ease 0.5s;
+    }
+    #intro-screen.on .intro-title,
+    #intro-screen.on .intro-sub,
+    #intro-screen.on .intro-tag {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    /* Outro Overlay */
+    #outro-screen {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      z-index: 85;
+      background: radial-gradient(circle at center, rgba(15, 23, 42, 0.96) 0%, rgba(3, 6, 11, 0.98) 85%);
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.8s ease;
+    }
+    #outro-screen.on {
+      opacity: 1;
+      pointer-events: auto;
+    }
+    .outro-badge {
+      font-size: 24px;
+      font-weight: 800;
+      color: #38BDF8;
+      background: rgba(56, 189, 248, 0.12);
+      border: 1px solid rgba(56, 189, 248, 0.3);
+      padding: 8px 24px;
+      border-radius: 24px;
+      margin-bottom: 24px;
+      letter-spacing: 2px;
+    }
+    .outro-cta-title {
+      font-size: 78px;
+      font-weight: 900;
+      text-align: center;
+      line-height: 1.25;
+      padding: 0 40px;
+      background: linear-gradient(180deg, #FFF 20%, #BAE6FD 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+    .outro-cta-sub {
+      font-size: 36px;
+      color: #94A3B8;
+      margin-top: 18px;
+      font-weight: 600;
+      text-align: center;
+    }
+    .store-buttons {
+      display: flex;
+      gap: 24px;
+      margin-top: 48px;
+    }
+    .store-btn {
+      background: rgba(255, 255, 255, 0.08);
+      border: 2px solid rgba(255, 255, 255, 0.18);
+      border-radius: 20px;
+      padding: 16px 36px;
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      font-family: 'Inter', sans-serif;
+    }
+    .store-btn .icon { font-size: 38px; }
+    .store-btn .btn-text-small { font-size: 16px; color: #94A3B8; text-transform: uppercase; }
+    .store-btn .btn-text-big { font-size: 26px; font-weight: 800; color: #FFF; }
+
+    /* Studio Playback Controls Bar */
+    #controls-bar {
+      position: absolute;
+      bottom: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(15, 23, 42, 0.88);
+      backdrop-filter: blur(20px);
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      border-radius: 28px;
+      padding: 12px 28px;
+      display: flex;
+      align-items: center;
+      gap: 20px;
+      box-shadow: 0 20px 50px rgba(0, 0, 0, 0.8);
+      z-index: 100;
+      direction: ltr;
+    }
+    .ctrl-btn {
+      background: none;
+      border: none;
+      color: #FFF;
+      font-size: 20px;
+      cursor: pointer;
+      width: 44px;
+      height: 44px;
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.2s;
+    }
+    .ctrl-btn:hover {
+      background: rgba(255, 255, 255, 0.1);
+      transform: scale(1.05);
+    }
+    .ctrl-btn.play {
+      background: var(--primary);
+      box-shadow: 0 4px 16px var(--primary-glow);
+    }
+    .ctrl-btn.play:hover {
+      background: #4B9BFF;
+    }
+    #scrubber {
+      width: 320px;
+      -webkit-appearance: none;
+      height: 8px;
+      border-radius: 4px;
+      background: rgba(255, 255, 255, 0.2);
+      outline: none;
+      cursor: pointer;
+    }
+    #scrubber::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      width: 18px;
+      height: 18px;
+      border-radius: 50%;
+      background: #38BDF8;
+      box-shadow: 0 0 10px #38BDF8;
+      cursor: pointer;
+    }
+    .time-display {
+      font-family: 'Inter', monospace;
+      font-size: 15px;
+      font-weight: 600;
+      color: #94A3B8;
+      min-width: 95px;
+    }
+    .scene-pill {
+      background: rgba(56, 189, 248, 0.12);
+      border: 1px solid rgba(56, 189, 248, 0.3);
+      color: #38BDF8;
+      padding: 4px 14px;
+      border-radius: 12px;
+      font-size: 13px;
+      font-weight: 700;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Ambient Light Fields -->
+  <div class="bg-glow-1"></div>
+  <div class="bg-glow-2"></div>
+
+  <div id="studio">
+    <div id="stage-container">
+      <div id="stage">
+        <div id="stage-grid"></div>
+        <div class="spotlight-cone" id="spotlight"></div>
+
+        <!-- Titles Layer -->
+        <div id="titles">
+          <div class="title-en" id="t-en">NEW DASHBOARD</div>
+          <div class="title-ar" id="t-ar">لوحة تحكم ذكية وشاملة</div>
+          <div class="title-sub" id="t-sub">أسرع • أوضح • خصوصية تامة</div>
+        </div>
+
+        <!-- 2.5D Camera World -->
+        <div id="world">
+          <div id="cam">
+
+            <!-- Phone 1 (Main Hero) -->
+            <div class="phone-rig" id="phone-main">
+              <div class="phone-shell">
+                <div class="phone-notch"></div>
+                <div class="phone-sheen"></div>
+                <img class="phone-screen" id="img-main" src="assets/dash.png" alt="Shiftaty App">
+              </div>
+
+              <!-- Animated Focus Rings -->
+              <div class="focus-ring" id="ring-1" style="left: 6%; top: 13.5%; width: 88%; height: 12%;"></div>
+              <div class="focus-ring" id="ring-2" style="left: 6%; top: 39%; width: 88%; height: 21%;"></div>
+              <div class="focus-ring" id="ring-3" style="left: 6%; top: 62%; width: 88%; height: 28%;"></div>
+
+              <!-- Floating Callout Badge -->
+              <div class="floating-badge" id="badge-stat" style="bottom: 120px; right: -50px;">
+                <div class="badge-icon">💰</div>
+                <div>
+                  <div class="badge-title">EGP 48,750</div>
+                  <div class="badge-sub">حساب تلقائي لجميع الشفتات</div>
+                </div>
+              </div>
+
+              <div class="floating-badge emerald" id="badge-priv" style="top: 240px; left: -60px;">
+                <div class="badge-icon">🔒</div>
+                <div>
+                  <div class="badge-title">إخفاء الأرقام بلمسة</div>
+                  <div class="badge-sub">خصوصية تامة أمام الزملاء</div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Phone 2 (Side Wing Left) for Montage/Outro -->
+            <div class="phone-rig" id="phone-left" style="transform: translateX(-460px) translateZ(-160px) rotateY(28deg); opacity: 0;">
+              <div class="phone-shell">
+                <div class="phone-notch"></div>
+                <div class="phone-sheen"></div>
+                <img class="phone-screen" src="assets/add.png" alt="Add Shift">
+              </div>
+            </div>
+
+            <!-- Phone 3 (Side Wing Right) for Montage/Outro -->
+            <div class="phone-rig" id="phone-right" style="transform: translateX(460px) translateZ(-160px) rotateY(-28deg); opacity: 0;">
+              <div class="phone-shell">
+                <div class="phone-notch"></div>
+                <div class="phone-sheen"></div>
+                <img class="phone-screen" src="assets/rep.png" alt="Reports">
+              </div>
+            </div>
+
+          </div>
+        </div>
+
+        <!-- Cold Open Screen -->
+        <div id="intro-screen">
+          <img class="logo-hero" src="assets/logo.png" alt="Shiftaty Logo">
+          <div class="intro-title">شفتاتي</div>
+          <div class="intro-sub">SHIFTATY v1.5.0</div>
+          <div class="intro-tag">تطبيق إدارة الشفتات والمستحقات للأطباء</div>
+        </div>
+
+        <!-- Grand Outro Screen -->
+        <div id="outro-screen">
+          <div class="outro-badge">متاح الآن للتحميل</div>
+          <div class="outro-cta-title">رتّب شفتاتك واحسب دخلك بسهولة</div>
+          <div class="outro-cta-sub">وفّر وقتك وركّز في مرضاك • شفتاتي معاك دائماً</div>
+          <div class="store-buttons">
+            <div class="store-btn">
+              <span class="icon"></span>
+              <div>
+                <div class="btn-text-small">Download on the</div>
+                <div class="btn-text-big">App Store</div>
+              </div>
+            </div>
+            <div class="store-btn">
+              <span class="icon">▶</span>
+              <div>
+                <div class="btn-text-small">Get it on</div>
+                <div class="btn-text-big">Google Play</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <!-- Studio Playback Controls -->
+  <div id="controls-bar">
+    <button class="ctrl-btn play" id="btn-play">▶</button>
+    <button class="ctrl-btn" id="btn-prev">⏮</button>
+    <input type="range" id="scrubber" min="0" max="30" step="0.05" value="0">
+    <button class="ctrl-btn" id="btn-next">⏭</button>
+    <span class="time-display" id="time-txt">00:00 / 00:30</span>
+    <span class="scene-pill" id="scene-tag">Scene: Intro</span>
+    <button class="ctrl-btn" id="btn-sound" title="Toggle Sound">🔊</button>
+  </div>
+
+  <!-- Audio Elements -->
+  <audio id="bgm" src="assets/audio/bgm/house-vibez.mp3" preload="auto"></audio>
+  <audio id="sfx-riser" src="assets/audio/sfx/riser/riser-cine.mp3" preload="auto"></audio>
+  <audio id="sfx-impact" src="assets/audio/sfx/impact/impact-epic-trailer.mp3" preload="auto"></audio>
+  <audio id="sfx-whoosh" src="assets/audio/sfx/transition/air-woosh-quick.mp3" preload="auto"></audio>
+  <audio id="sfx-whoosh-big" src="assets/audio/sfx/transition/whoosh-fast.mp3" preload="auto"></audio>
+  <audio id="sfx-click" src="assets/audio/sfx/ui/ui-click-tone.mp3" preload="auto"></audio>
+  <audio id="sfx-switch" src="assets/audio/sfx/ui/switch-click-quick.mp3" preload="auto"></audio>
+  <audio id="sfx-pop" src="assets/audio/sfx/ui/hitech-touch-magnet.mp3" preload="auto"></audio>
+  <audio id="sfx-outro" src="assets/audio/sfx/impact/bass-hit-futuristic.mp3" preload="auto"></audio>
+
+  <script>
+    const DURATION = 30.0; // 30 seconds
+    const $ = id => document.getElementById(id);
+
+    // Responsive Canvas Fit
+    function fitStage() {
+      const margin = 120;
+      const availW = window.innerWidth - 60;
+      const availH = window.innerHeight - margin;
+      const scale = Math.min(availW / 1080, availH / 1920);
+      $('stage-container').style.width = (1080 * scale) + 'px';
+      $('stage-container').style.height = (1920 * scale) + 'px';
+      $('stage').style.transform = `scale(${scale})`;
+    }
+    window.addEventListener('resize', fitStage);
+    fitStage();
+
+    // Sound Manager
+    let soundEnabled = true;
+    function playSfx(id) {
+      if (!soundEnabled) return;
+      const el = $(id);
+      if (el) {
+        el.currentTime = 0;
+        el.volume = 0.85;
+        el.play().catch(() => {});
+      }
+    }
+
+    // Storyboard Scenes Definition
+    const SCENES = [
+      {
+        id: 'intro',
+        start: 0.0,
+        end: 3.2,
+        name: 'Brand Open',
+        action: (p, t) => {
+          $('intro-screen').classList.add('on');
+          $('spotlight').classList.remove('on');
+          $('titles').style.opacity = '0';
+          $('phone-main').classList.remove('active');
+          $('phone-left').style.opacity = '0';
+          $('phone-right').style.opacity = '0';
+          $('outro-screen').classList.remove('on');
+        }
+      },
+      {
+        id: 'dash',
+        start: 3.2,
+        end: 8.5,
+        name: 'New Dashboard',
+        action: (p, t) => {
+          $('intro-screen').classList.remove('on');
+          $('outro-screen').classList.remove('on');
+          $('spotlight').classList.add('on');
+          $('titles').style.opacity = '1';
+          $('phone-main').classList.add('active');
+          $('phone-left').style.opacity = '0';
+          $('phone-right').style.opacity = '0';
+          $('img-main').src = 'assets/dash.png';
+
+          // Text
+          updateText('NEW DASHBOARD', 'لوحة تحكم ذكية وشاملة', 'سريعة • واضحة • خصوصية تامة للأرقام');
+
+          // Camera & Phone 2.5D move
+          const rotY = -12 + (p * 5);
+          const rotX = 6 - (p * 3);
+          const zoom = 1 + (p * 0.12);
+          $('cam').style.transform = `rotateY(${rotY}deg) rotateX(${rotX}deg) scale(${zoom})`;
+
+          // Rings
+          if (p < 0.35) {
+            setRings(true, false, false);
+            $('badge-stat').classList.add('on');
+            $('badge-priv').classList.remove('on');
+          } else if (p < 0.7) {
+            setRings(false, true, false);
+            $('badge-stat').classList.remove('on');
+            $('badge-priv').classList.add('on');
+          } else {
+            setRings(false, false, true);
+            $('badge-stat').classList.remove('on');
+            $('badge-priv').classList.remove('on');
+          }
+        }
+      },
+      {
+        id: 'add',
+        start: 8.5,
+        end: 14.0,
+        name: 'Log Shifts',
+        action: (p, t) => {
+          $('img-main').src = 'assets/add.png';
+          updateText('LOG SHIFTS IN SECONDS', 'سجّل شفتك في ثوانٍ', '5 نماذج دفع مرنة • نسخ شفت اليوم بلمسة');
+          clearRings();
+          $('badge-stat').classList.remove('on');
+          $('badge-priv').classList.remove('on');
+
+          const rotY = 10 - (p * 6);
+          const rotX = 4 + (p * 2);
+          $('cam').style.transform = `rotateY(${rotY}deg) rotateX(${rotX}deg) scale(1.08)`;
+        }
+      },
+      {
+        id: 'hosp',
+        start: 14.0,
+        end: 19.5,
+        name: 'Hospitals',
+        action: (p, t) => {
+          $('img-main').src = 'assets/hosp.png';
+          updateText('YOUR HOSPITALS', 'مستشفياتك منظمة في جيبك', 'حسابات ومعدلات منفصلة لكل مستشفى وعيادة');
+          clearRings();
+
+          const rotY = -8 + (p * 4);
+          const rotX = 8 - (p * 4);
+          $('cam').style.transform = `rotateY(${rotY}deg) rotateX(${rotX}deg) scale(1.05)`;
+        }
+      },
+      {
+        id: 'rep',
+        start: 19.5,
+        end: 24.5,
+        name: 'Reports',
+        action: (p, t) => {
+          $('img-main').src = 'assets/rep.png';
+          updateText('EXECUTIVE REPORTS', 'تقارير مالية تنفيذية', 'تصدير PDF بخط أميري عربي • CSV • مشاركة فورية');
+          clearRings();
+
+          const rotY = 4 - (p * 3);
+          const rotX = -2 + (p * 4);
+          const zoom = 1.05 + (p * 0.15);
+          $('cam').style.transform = `rotateY(${rotY}deg) rotateX(${rotX}deg) scale(${zoom})`;
+        }
+      },
+      {
+        id: 'montage',
+        start: 24.5,
+        end: 27.2,
+        name: 'Rapid Montage',
+        action: (p, t) => {
+          clearRings();
+          $('badge-stat').classList.remove('on');
+          $('badge-priv').classList.remove('on');
+          updateText('EXPERIENCE SHIFTATY', 'تجربة استخدام فائقة السرعة', 'سلاسة استثنائية مصممة ليومك الطبي المزدحم');
+
+          // Rapid frame swaps on beat
+          const step = Math.floor(p * 5);
+          const screens = ['dash.png', 'add.png', 'hosp.png', 'rep.png', 'menu.png'];
+          $('img-main').src = 'assets/' + screens[Math.min(step, 4)];
+
+          const wiggle = (step % 2 === 0 ? 5 : -5);
+          $('cam').style.transform = `rotateY(${wiggle}deg) rotateX(2deg) scale(1.15)`;
+        }
+      },
+      {
+        id: 'outro',
+        start: 27.2,
+        end: 30.0,
+        name: 'Outro & CTA',
+        action: (p, t) => {
+          clearRings();
+          $('titles').style.opacity = '0';
+          $('spotlight').classList.remove('on');
+          $('outro-screen').classList.add('on');
+
+          // Trio Hero Phone Cluster
+          $('phone-main').classList.add('active');
+          $('phone-left').style.opacity = '0.9';
+          $('phone-right').style.opacity = '0.9';
+          $('img-main').src = 'assets/dash.png';
+
+          $('cam').style.transform = `rotateY(0deg) rotateX(0deg) scale(0.92) translateY(180px)`;
+        }
+      }
+    ];
+
+    function updateText(en, ar, sub) {
+      const ten = $('t-en'), tar = $('t-ar'), tsub = $('t-sub');
+      if (ten.textContent !== en) {
+        ten.classList.remove('on');
+        tar.classList.remove('on');
+        tsub.classList.remove('on');
+        setTimeout(() => {
+          ten.textContent = en;
+          tar.textContent = ar;
+          tsub.textContent = sub;
+          ten.classList.add('on');
+          tar.classList.add('on');
+          tsub.classList.add('on');
+        }, 80);
+      }
+    }
+
+    function setRings(r1, r2, r3) {
+      $('ring-1').className = 'focus-ring ' + (r1 ? 'on' : '');
+      $('ring-2').className = 'focus-ring ' + (r2 ? 'on' : '');
+      $('ring-3').className = 'focus-ring ' + (r3 ? 'on' : '');
+    }
+    function clearRings() {
+      setRings(false, false, false);
+    }
+
+    // Playback Engine
+    let currentTime = 0;
+    let isPlaying = false;
+    let lastTimestamp = null;
+    let playedSfx = {};
+
+    function renderTime(t) {
+      currentTime = Math.max(0, Math.min(t, DURATION));
+      $('scrubber').value = currentTime;
+      
+      const mm = String(Math.floor(currentTime / 60)).padStart(2, '0');
+      const ss = String(Math.floor(currentTime % 60)).padStart(2, '0');
+      $('time-txt').textContent = `${mm}:${ss} / 00:30`;
+
+      // Find active scene
+      const sc = SCENES.find(s => currentTime >= s.start && currentTime < s.end) || SCENES[SCENES.length - 1];
+      $('scene-tag').textContent = `Scene: ${sc.name}`;
+
+      const progress = (currentTime - sc.start) / (sc.end - sc.start);
+      sc.action(progress, currentTime);
+
+      // Sound Pinpointing Trigger
+      checkSfxTriggers(currentTime);
+    }
+
+    function checkSfxTriggers(t) {
+      const triggers = [
+        { t: 0.1, id: 'sfx-riser' },
+        { t: 1.8, id: 'sfx-impact' },
+        { t: 3.1, id: 'sfx-whoosh-big' },
+        { t: 5.2, id: 'sfx-switch' },
+        { t: 8.4, id: 'sfx-whoosh' },
+        { t: 10.2, id: 'sfx-click' },
+        { t: 13.9, id: 'sfx-whoosh' },
+        { t: 16.0, id: 'sfx-pop' },
+        { t: 19.4, id: 'sfx-whoosh-big' },
+        { t: 24.4, id: 'sfx-whoosh' },
+        { t: 27.1, id: 'sfx-outro' }
+      ];
+
+      triggers.forEach(tr => {
+        const key = tr.id + '_' + tr.t;
+        if (t >= tr.t && t < tr.t + 0.25 && !playedSfx[key]) {
+          playedSfx[key] = true;
+          playSfx(tr.id);
+        } else if (t < tr.t) {
+          delete playedSfx[key];
+        }
+      });
+    }
+
+    function loop(now) {
+      if (!isPlaying) return;
+      if (!lastTimestamp) lastTimestamp = now;
+      const dt = (now - lastTimestamp) / 1000;
+      lastTimestamp = now;
+
+      renderTime(currentTime + dt);
+
+      if (currentTime >= DURATION) {
+        pause();
+        renderTime(DURATION);
+      } else {
+        requestAnimationFrame(loop);
+      }
+    }
+
+    function play() {
+      isPlaying = true;
+      lastTimestamp = null;
+      $('btn-play').textContent = '❚❚';
+      if (soundEnabled) {
+        const bgm = $('bgm');
+        bgm.currentTime = currentTime;
+        bgm.volume = 0.65;
+        bgm.play().catch(() => {});
+      }
+      requestAnimationFrame(loop);
+    }
+
+    function pause() {
+      isPlaying = false;
+      $('btn-play').textContent = '▶';
+      $('bgm').pause();
+    }
+
+    $('btn-play').addEventListener('click', () => {
+      if (isPlaying) pause();
+      else {
+        if (currentTime >= DURATION) currentTime = 0;
+        play();
+      }
+    });
+
+    $('scrubber').addEventListener('input', e => {
+      const t = parseFloat(e.target.value);
+      renderTime(t);
+      if (isPlaying && soundEnabled) {
+        $('bgm').currentTime = t;
+      }
+    });
+
+    $('btn-prev').addEventListener('click', () => {
+      const curIdx = SCENES.findIndex(s => currentTime >= s.start && currentTime < s.end);
+      const prevIdx = Math.max(0, curIdx - 1);
+      renderTime(SCENES[prevIdx].start);
+    });
+
+    $('btn-next').addEventListener('click', () => {
+      const curIdx = SCENES.findIndex(s => currentTime >= s.start && currentTime < s.end);
+      const nextIdx = Math.min(SCENES.length - 1, curIdx + 1);
+      renderTime(SCENES[nextIdx].start);
+    });
+
+    $('btn-sound').addEventListener('click', () => {
+      soundEnabled = !soundEnabled;
+      $('btn-sound').textContent = soundEnabled ? '🔊' : '🔇';
+      if (!soundEnabled) {
+        $('bgm').pause();
+      } else if (isPlaying) {
+        $('bgm').currentTime = currentTime;
+        $('bgm').play().catch(() => {});
+      }
+    });
+
+    // Initial render
+    renderTime(0);
+  </script>
+</body>
+</html>
